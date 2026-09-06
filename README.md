@@ -20,7 +20,8 @@ flowchart TD
     P -->|No| Q{"Can Retry?<br/>Allowed attempts: 5"}
     Q -->|Yes| L
     Q -->|No| R(["Return Error to User"])
-    M --> N(["Return to User"])
+    M --> S["Add to Semantic Cache"]
+    S --> N(["Return to User"])
     N --> O["Observability / Metrics / Feedback"]
     classDef entry fill:#e0e7ff,stroke:#4338ca,stroke-width:1.5px,color:#1e1b4b
     classDef security fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#451a03
@@ -31,7 +32,7 @@ flowchart TD
     class A,B,N,O entry
     class C,C1,M security
     class C2,R errorpath
-    class D,E cache
+    class D,E,S cache
     class F,G,H,I,J,K retrieval
     class L,P,Q generation
 ```
