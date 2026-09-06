@@ -17,7 +17,7 @@ flowchart TD
     K --> L
     L --> P{"Response<br/>Passed?"}
     P -->|Yes| M["Response Validation<br/>Grounding / Safety / Format / Citations"]
-    P -->|No| Q{"Can Retry?<br/>Allowed attempts: 5"}
+    P -->|No| Q{"Can Retry?<br/>Allowed attempts: 2"}
     Q -->|Yes| L
     Q -->|No| R(["Return Error to User"])
     M --> S["Add to Semantic Cache"]
