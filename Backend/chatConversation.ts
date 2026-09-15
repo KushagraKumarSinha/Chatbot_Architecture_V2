@@ -11,6 +11,10 @@ const RERANK_SNIPPET_LENGTH = 800;
 const CHAT_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Optional knowledge-base version tag surfaced on every hybrid_search log
+// line so you can correlate answer quality regressions with a specific
+// ingestion/reindex run. Falls back to "unknown" if not set.
+const KNOWLEDGE_BASE_VERSION = Deno.env.get("KNOWLEDGE_BASE_VERSION") ?? "unknown";
 
 // Network resilience tuning. These are conservative defaults for a
 // user-facing chat endpoint — tune per your latency/cost budget.
@@ -129,6 +133,14 @@ interface HybridSearchResult {
   score: number;
 }
 
+/** Normalized token-usage shape, independent of any single provider's
+ * response schema, so every log line that reports usage looks the same. */
+interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Network resilience helpers
 // ─────────────────────────────────────────────────────────────────────────
@@ -201,16 +213,21 @@ function isUpstashRetryable(err: unknown): boolean {
  * transient per `isRetryable` (defaults to the original OpenAI-only
  * check, so existing call sites behave exactly as before). Anything else
  * (bad request, auth failure, parsing errors) fails fast on the first try.
+ *
+ * Returns both the result AND how many retry attempts were consumed
+ * (0 = succeeded on the first try) so callers can log `retry_count`
+ * without duplicating the attempt-counting logic at every call site.
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
   retries: number = OPENAI_MAX_RETRIES,
   baseDelayMs: number = OPENAI_RETRY_BASE_DELAY_MS,
   isRetryable: (err: unknown) => boolean = isOpenAiRetryable,
-): Promise<T> {
+): Promise<{ result: T; retryCount: number }> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await fn();
+      const result = await fn();
+      return { result, retryCount: attempt };
     } catch (err) {
       const shouldRetry = isRetryable(err) && attempt < retries;
       if (!shouldRetry) throw err;
@@ -222,6 +239,53 @@ async function withRetry<T>(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Observability helpers
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Every pipeline stage emits one structured JSON line via logEvent(). Each
+// line carries `request_id` (and, where relevant, `trace_id`) so a log
+// aggregator can group every line for a single user turn together, plus
+// an `operation` / event name and stage-specific fields (durations, token
+// counts, cache outcomes, etc). Nothing here ever throws — a logging
+// failure must never break the user-facing request.
+
+/** Emits one structured JSON log line. Never throws. */
+function logEvent(event: string, fields: Record<string, unknown>): void {
+  try {
+    console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...fields }));
+  } catch (err) {
+    console.error("logEvent: failed to serialize log line", event, err);
+  }
+}
+
+/**
+ * SHA-256 hex digest of a piece of query text. Used to log a stable,
+ * de-duplicable fingerprint of a query (for cache/search correlation)
+ * without writing raw, potentially sensitive user content into logs.
+ */
+async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Normalizes any thrown error into a stable {error_type, error_status} pair for logging. */
+function classifyError(err: unknown): { errorType: string; errorStatus?: number } {
+  if (err instanceof UpstreamHttpError) {
+    return { errorType: err.name, errorStatus: err.status };
+  }
+  if (err instanceof DOMException && err.name === "AbortError") {
+    return { errorType: "TimeoutError" };
+  }
+  if (err instanceof Error) {
+    return { errorType: err.name || "Error" };
+  }
+  return { errorType: "UnknownError" };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // OpenAI API wrappers
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -229,8 +293,8 @@ async function chatCompletion(
   apiKey: string,
   messages: ChatMessage[],
   opts: { jsonMode?: boolean; temperature?: number; maxTokens?: number } = {},
-): Promise<string> {
-  return withRetry(async () => {
+): Promise<{ content: string; usage: TokenUsage; retryCount: number }> {
+  const { result: data, retryCount } = await withRetry(async () => {
     const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -251,17 +315,29 @@ async function chatCompletion(
       throw new OpenAiHttpError(`OpenAI chat completion failed: ${errText}`, response.status);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      throw new Error("OpenAI chat completion returned an empty response");
-    }
-    return content;
+    return await response.json();
   });
+
+  const content = data.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    throw new Error("OpenAI chat completion returned an empty response");
+  }
+
+  const usageRaw = data.usage ?? {};
+  const usage: TokenUsage = {
+    promptTokens: usageRaw.prompt_tokens ?? 0,
+    completionTokens: usageRaw.completion_tokens ?? 0,
+    totalTokens: usageRaw.total_tokens ?? 0,
+  };
+
+  return { content, usage, retryCount };
 }
 
-async function createEmbedding(apiKey: string, text: string): Promise<number[]> {
-  return withRetry(async () => {
+async function createEmbedding(
+  apiKey: string,
+  text: string,
+): Promise<{ embedding: number[]; retryCount: number }> {
+  const { result: data, retryCount } = await withRetry(async () => {
     const response = await fetchWithTimeout("https://api.openai.com/v1/embeddings", {
       method: "POST",
       headers: {
@@ -279,13 +355,15 @@ async function createEmbedding(apiKey: string, text: string): Promise<number[]> 
       throw new OpenAiHttpError(`OpenAI embeddings call failed: ${errText}`, response.status);
     }
 
-    const data = await response.json();
-    const embedding = data.data?.[0]?.embedding;
-    if (!Array.isArray(embedding)) {
-      throw new Error("OpenAI embeddings call returned no embedding vector");
-    }
-    return embedding as number[];
+    return await response.json();
   });
+
+  const embedding = data.data?.[0]?.embedding;
+  if (!Array.isArray(embedding)) {
+    throw new Error("OpenAI embeddings call returned no embedding vector");
+  }
+
+  return { embedding: embedding as number[], retryCount };
 }
 
 /**
@@ -364,6 +442,20 @@ interface CacheHit {
   answer: string;
 }
 
+/**
+ * Full outcome of a cache lookup, including WHY it missed (for
+ * observability) — not just whether it hit. `cacheEnabled` is false only
+ * when Upstash isn't configured at all; a configured-but-empty-or-cold
+ * cache still reports `cacheEnabled: true` with a `missReason`.
+ */
+interface CacheLookupOutcome {
+  cacheEnabled: boolean;
+  hit: CacheHit | null;
+  missReason?: "cache_not_configured" | "no_match" | "below_threshold" | "malformed_entry" | "stale" | "lookup_error";
+  similarityScore?: number;
+  cacheAgeMs?: number;
+}
+
 function getUpstashConfig(): { baseUrl: string; token: string } | null {
   const baseUrl = Deno.env.get("UPSTASH_VECTOR_REST_URL");
   const token = Deno.env.get("UPSTASH_VECTOR_REST_TOKEN");
@@ -373,23 +465,28 @@ function getUpstashConfig(): { baseUrl: string; token: string } | null {
 
 /**
  * Looks up the nearest neighbor for `embedding` in the semantic cache
- * index and returns it only if it's:
+ * index. Returns a CacheLookupOutcome describing not just whether it hit
+ * (`hit`), but — on a miss — WHY (`missReason`), plus the similarity
+ * score and cache age where known, so callers can log a full picture of
+ * cache behavior rather than a bare boolean.
+ *
+ * A hit requires:
  *   1. similar enough (score >= CACHE_SIMILARITY_THRESHOLD), and
  *   2. not stale (cached_at is within CACHE_TTL_MS), and
  *   3. carries a non-empty cached answer string.
  *
- * Returns null on a genuine miss, on any error, or when the cache isn't
- * configured — callers should treat null as "run the pipeline normally".
+ * Any error, missing config, or failed validation is reported as a miss
+ * — callers should treat `hit === null` as "run the pipeline normally".
  *
  * Stale hits are proactively deleted (fire-and-forget) so the index
  * doesn't accumulate entries that will never be served again.
  */
-async function queryCache(embedding: number[]): Promise<CacheHit | null> {
+async function queryCache(embedding: number[]): Promise<CacheLookupOutcome> {
   const config = getUpstashConfig();
-  if (!config) return null; // cache not configured — skip silently
+  if (!config) return { cacheEnabled: false, hit: null, missReason: "cache_not_configured" };
 
   try {
-    const match = await withRetry(
+    const { result: match } = await withRetry(
       async () => {
         const response = await fetchWithTimeout(
           `${config.baseUrl}/query`,
@@ -423,32 +520,38 @@ async function queryCache(embedding: number[]): Promise<CacheHit | null> {
       isUpstashRetryable,
     );
 
-    if (!match) return null; // no neighbor at all (e.g. empty index)
+    if (!match) return { cacheEnabled: true, hit: null, missReason: "no_match" };
 
     if (typeof match.score !== "number" || match.score < CACHE_SIMILARITY_THRESHOLD) {
-      return null; // nearest neighbor exists but isn't a confident match
+      return { cacheEnabled: true, hit: null, missReason: "below_threshold", similarityScore: match.score };
     }
 
     const answer = match.metadata?.answer;
     if (typeof answer !== "string" || answer.length === 0) {
-      return null; // malformed cache entry — treat as a miss
+      return { cacheEnabled: true, hit: null, missReason: "malformed_entry", similarityScore: match.score };
     }
 
     const cachedAt = typeof match.metadata?.cached_at === "string" ? Date.parse(match.metadata.cached_at) : NaN;
-    const isStale = Number.isNaN(cachedAt) || Date.now() - cachedAt > CACHE_TTL_MS;
+    const cacheAgeMs = Number.isNaN(cachedAt) ? undefined : Date.now() - cachedAt;
+    const isStale = Number.isNaN(cachedAt) || (cacheAgeMs as number) > CACHE_TTL_MS;
 
     if (isStale) {
       // Best-effort cleanup. Never awaited — deletion failing must not
       // affect the current request, which will fall through to the
       // normal pipeline and overwrite this entry on the next upsert.
       deleteCacheEntryAsync(match.id);
-      return null;
+      return { cacheEnabled: true, hit: null, missReason: "stale", similarityScore: match.score, cacheAgeMs };
     }
 
-    return { id: match.id, score: match.score, answer };
+    return {
+      cacheEnabled: true,
+      hit: { id: match.id, score: match.score, answer },
+      similarityScore: match.score,
+      cacheAgeMs,
+    };
   } catch (err) {
     console.error("queryCache: cache lookup failed, treating as cache miss", err);
-    return null;
+    return { cacheEnabled: true, hit: null, missReason: "lookup_error" };
   }
 }
 
@@ -541,23 +644,30 @@ function deleteCacheEntryAsync(id: string): void {
 interface ClassifyAndRewriteResult {
   isMlRelated: boolean;
   rewrittenQuery: string;
+  usage: TokenUsage;
+  retryCount: number;
+  parseSuccess: boolean;
+  fallbackUsed: boolean;
 }
 
 /**
  * Single LLM call that replaces the old two-call classify → rewrite
  * sequence. Returns both the ML-relatedness flag and the standalone
- * search-query rewrite in one round trip.
+ * search-query rewrite in one round trip, plus everything the caller
+ * needs to log the step (`usage`, `retryCount`, `parseSuccess`,
+ * `fallbackUsed`).
  *
  * If parsing fails, or the rewrite comes back empty for a message that
  * was classified as ML-related, we fail safe by treating the message as
  * NOT ML-related — this routes to the plain conversational reply instead
  * of crashing the whole request or running retrieval with a broken query.
+ * Both cases set `fallbackUsed: true` so it's visible in logs.
  */
 async function classifyAndRewrite(
   apiKey: string,
   history: ChatMessage[],
 ): Promise<ClassifyAndRewriteResult> {
-  const raw = await chatCompletion(
+  const { content: raw, usage, retryCount } = await chatCompletion(
     apiKey,
     [{ role: "system", content: CLASSIFY_AND_REWRITE_SYSTEM_PROMPT }, ...history],
     { jsonMode: true, temperature: 0 },
@@ -570,13 +680,13 @@ async function classifyAndRewrite(
 
     if (isMlRelated && !rewrittenQuery) {
       console.error("classifyAndRewrite: ML-related but rewritten_query was empty; failing safe to non-ML path", raw);
-      return { isMlRelated: false, rewrittenQuery: "" };
+      return { isMlRelated: false, rewrittenQuery: "", usage, retryCount, parseSuccess: true, fallbackUsed: true };
     }
 
-    return { isMlRelated, rewrittenQuery };
+    return { isMlRelated, rewrittenQuery, usage, retryCount, parseSuccess: true, fallbackUsed: false };
   } catch {
     console.error("classifyAndRewrite: failed to parse model output", raw);
-    return { isMlRelated: false, rewrittenQuery: "" };
+    return { isMlRelated: false, rewrittenQuery: "", usage, retryCount, parseSuccess: false, fallbackUsed: true };
   }
 }
 
@@ -598,12 +708,23 @@ async function performHybridSearch(
   return (data ?? []) as HybridSearchResult[];
 }
 
+interface RerankOutcome {
+  results: HybridSearchResult[];
+  usage: TokenUsage | null;
+  retryCount: number;
+  parseSuccess: boolean;
+  fallbackUsed: boolean;
+  fallbackReason?: "no_candidates" | "empty_ranked_ids" | "rerank_call_failed";
+}
+
 async function rerankResults(
   apiKey: string,
   rewrittenQuery: string,
   candidates: HybridSearchResult[],
-): Promise<HybridSearchResult[]> {
-  if (candidates.length === 0) return [];
+): Promise<RerankOutcome> {
+  if (candidates.length === 0) {
+    return { results: [], usage: null, retryCount: 0, parseSuccess: true, fallbackUsed: false, fallbackReason: "no_candidates" };
+  }
 
   const candidateList = candidates
     .map((c) => {
@@ -617,7 +738,7 @@ async function rerankResults(
   const userPrompt = `Query: ${rewrittenQuery}\n\nCandidates:\n${candidateList}`;
 
   try {
-    const raw = await chatCompletion(
+    const { content: raw, usage, retryCount } = await chatCompletion(
       apiKey,
       [
         { role: "system", content: RERANK_SYSTEM_PROMPT },
@@ -635,13 +756,30 @@ async function rerankResults(
       .filter((c): c is HybridSearchResult => Boolean(c))
       .slice(0, RERANK_TOP_N);
 
-    if (reranked.length > 0) return reranked;
+    if (reranked.length > 0) {
+      return { results: reranked, usage, retryCount, parseSuccess: true, fallbackUsed: false };
+    }
+
+    // Fallback: keep the hybrid_search() RRF ordering (already sorted by score).
+    return {
+      results: candidates.slice(0, RERANK_TOP_N),
+      usage,
+      retryCount,
+      parseSuccess: true,
+      fallbackUsed: true,
+      fallbackReason: "empty_ranked_ids",
+    };
   } catch (err) {
     console.error("rerankResults: falling back to score-based ordering", err);
+    return {
+      results: candidates.slice(0, RERANK_TOP_N),
+      usage: null,
+      retryCount: 0,
+      parseSuccess: false,
+      fallbackUsed: true,
+      fallbackReason: "rerank_call_failed",
+    };
   }
-
-  // Fallback: keep the hybrid_search() RRF ordering (already sorted by score).
-  return candidates.slice(0, RERANK_TOP_N);
 }
 
 function buildContextBlock(chunks: HybridSearchResult[]): string {
@@ -658,7 +796,7 @@ async function generateGroundedAnswer(
   historyWithoutLastTurn: ChatMessage[],
   rewrittenQuery: string,
   contextChunks: HybridSearchResult[],
-): Promise<string> {
+): Promise<{ content: string; usage: TokenUsage; retryCount: number }> {
   const augmentedUserTurn = `CONTEXT:\n${buildContextBlock(contextChunks)}\n\nQUESTION: ${rewrittenQuery}`;
 
   return await chatCompletion(apiKey, [
@@ -693,29 +831,61 @@ function logQueryRewriteAsync(supabase: any, originalQuery: string, rewrittenQue
 // ─────────────────────────────────────────────────────────────────────────
 
 export const chatConversation: HandlerFn = async (payload, ctx) => {
+  const requestStartedAt = Date.now();
+  const requestId = `req_${crypto.randomUUID()}`;
+  // Accept an incoming trace id (e.g. from a distributed-tracing header
+  // forwarded in the payload) so this request's logs can be joined with
+  // an upstream trace; otherwise mint one so every request still has one.
+  const traceId =
+    (payload && typeof payload.trace_id === "string" && payload.trace_id) || `trace_${crypto.randomUUID()}`;
+
+  // Accumulates the section-A "request entry and validation" fields as
+  // they become known over the life of the request. Emitted as a single
+  // "request_completed" summary log right before every return path,
+  // success or failure, via the finish() helper below.
+  const requestLog: Record<string, unknown> = { request_id: requestId, trace_id: traceId };
+
+  const finish = (status: number, body: unknown) => {
+    requestLog.status = status;
+    requestLog.duration_ms = Date.now() - requestStartedAt;
+    logEvent("request_completed", requestLog);
+    return { status, body };
+  };
+
   if (!ctx.userId) {
-    return { status: 401, body: { error: "Unauthorized: no user found on request" } };
+    return finish(401, { error: "Unauthorized: no user found on request" });
   }
+  requestLog.user_id = ctx.userId;
 
   const conversationId = payload?.conversation_id;
   const rawMessage = payload?.message;
 
   // ── Input validation ────────────────────────────────────────────────
   if (!conversationId || typeof conversationId !== "string" || !UUID_RE.test(conversationId)) {
-    return { status: 400, body: { error: "A valid 'conversation_id' is required" } };
+    return finish(400, { error: "A valid 'conversation_id' is required" });
   }
+  requestLog.conversation_id = conversationId;
+
   if (!rawMessage || typeof rawMessage !== "string" || !rawMessage.trim()) {
-    return { status: 400, body: { error: "A non-empty 'message' string is required" } };
+    return finish(400, { error: "A non-empty 'message' string is required" });
   }
 
   const message = sanitizeMessage(rawMessage);
+  requestLog.message_length = message.length;
 
   if (message.length > MAX_MESSAGE_LENGTH) {
-    return {
-      status: 400,
-      body: { error: `Message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` },
-    };
+    return finish(400, {
+      error: `Message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters`,
+    });
   }
+
+  logEvent("request_started", {
+    request_id: requestId,
+    trace_id: traceId,
+    user_id: ctx.userId,
+    conversation_id: conversationId,
+    message_length: message.length,
+  });
 
   // ── Ownership check: conversation must exist and belong to this user ──
   const { data: conversation, error: convError } = await ctx.supabase
@@ -726,7 +896,7 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     .single();
 
   if (convError || !conversation) {
-    return { status: 404, body: { error: "Conversation not found" } };
+    return finish(404, { error: "Conversation not found" });
   }
 
   // Prompt-injection heuristic. Logged for observability AND remembered
@@ -737,6 +907,7 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
   // to other users later. Actual defense-in-depth still lives in the
   // system prompts themselves; this regex is a signal, not a filter.
   const suspiciousContentFlagged = flagSuspiciousContent(message);
+  requestLog.suspicious_content_flagged = suspiciousContentFlagged;
   if (suspiciousContentFlagged) {
     console.warn("chatConversation: suspicious content pattern detected", {
       userId: ctx.userId,
@@ -747,14 +918,16 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
   const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openAiApiKey) {
     console.error("chatConversation: OPENAI_API_KEY is not set");
-    return { status: 500, body: { error: "Server misconfiguration" } };
+    return finish(500, { error: "Server misconfiguration" });
   }
 
   // ── Moderation (soft-fail by design: an OpenAI outage should not block
   // support chat entirely — we log and let the message through) ────────
   const { flagged: inputFlagged, checked: inputModerationChecked } = await moderateText(openAiApiKey, message);
+  requestLog.input_moderation_checked = inputModerationChecked;
+  requestLog.input_moderation_flagged = inputFlagged;
   if (inputModerationChecked && inputFlagged) {
-    return { status: 400, body: { error: "Message violates content policy" } };
+    return finish(400, { error: "Message violates content policy" });
   }
 
   // ── Persist the user's message before generating a reply ─────────────
@@ -768,7 +941,7 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
 
   if (userMsgError) {
     console.error("chatConversation: failed to store user message", userMsgError);
-    return { status: 500, body: { error: "Failed to store user message" } };
+    return finish(500, { error: "Failed to store user message" });
   }
 
   // ── Load recent history (oldest → newest) for context ─────────────────
@@ -781,7 +954,7 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
 
   if (historyError) {
     console.error("chatConversation: failed to fetch history", historyError);
-    return { status: 500, body: { error: "Failed to fetch conversation history" } };
+    return finish(500, { error: "Failed to fetch conversation history" });
   }
 
   const history: ChatMessage[] = (recentHistoryDesc ?? [])
@@ -798,33 +971,81 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
   // changes.
   const historyWithoutLastTurn = history.slice(0, -1);
 
+  requestLog.history_count = history.length;
+  logEvent("input_validation_completed", {
+    request_id: requestId,
+    trace_id: traceId,
+    suspicious_content_flagged: suspiciousContentFlagged,
+    input_moderation_checked: inputModerationChecked,
+    input_moderation_flagged: inputFlagged,
+    history_count: history.length,
+    duration_ms: Date.now() - requestStartedAt,
+  });
+
   // ── Step 1: classify + rewrite in a single LLM call ───────────────────
   // (Previously: classify, then a second sequential call to rewrite the
   // query — merging them removes one full network round-trip from every
   // single user turn, ML-related or not.)
-  let isMlRelated: boolean;
-  let rewrittenQuery: string;
+  let classifyResult: ClassifyAndRewriteResult;
+  const classifyStartedAt = Date.now();
   try {
-    ({ isMlRelated, rewrittenQuery } = await classifyAndRewrite(openAiApiKey, history));
+    classifyResult = await classifyAndRewrite(openAiApiKey, history);
+    const rewrittenQueryHash = classifyResult.rewrittenQuery
+      ? await sha256Hex(classifyResult.rewrittenQuery)
+      : null;
+
+    logEvent("classify_rewrite_completed", {
+      request_id: requestId,
+      trace_id: traceId,
+      operation: "classify_and_rewrite",
+      model: CHAT_MODEL,
+      is_ml_related: classifyResult.isMlRelated,
+      rewritten_query_length: classifyResult.rewrittenQuery.length,
+      rewritten_query_hash: rewrittenQueryHash,
+      history_message_count: history.length,
+      duration_ms: Date.now() - classifyStartedAt,
+      input_tokens: classifyResult.usage.promptTokens,
+      output_tokens: classifyResult.usage.completionTokens,
+      total_tokens: classifyResult.usage.totalTokens,
+      retry_count: classifyResult.retryCount,
+      parse_success: classifyResult.parseSuccess,
+      fallback_used: classifyResult.fallbackUsed,
+    });
   } catch (err) {
+    const { errorType, errorStatus } = classifyError(err);
+    logEvent("classify_rewrite_failed", {
+      request_id: requestId,
+      trace_id: traceId,
+      operation: "classify_and_rewrite",
+      model: CHAT_MODEL,
+      history_message_count: history.length,
+      duration_ms: Date.now() - classifyStartedAt,
+      error_type: errorType,
+      error_status: errorStatus,
+    });
     console.error("chatConversation: classify+rewrite failed", err);
-    return { status: 502, body: { error: "Failed to classify the question" } };
+    return finish(502, { error: "Failed to classify the question" });
   }
 
+  const { isMlRelated, rewrittenQuery } = classifyResult;
+  requestLog.path = isMlRelated ? "ml_rag" : "general";
+
   let botReply: string;
+  let cacheHitForLog = false;
 
   if (!isMlRelated) {
     // ── Non-ML path: plain conversational reply, no retrieval, no cache ──
     // (The semantic cache only stores answers grounded in the ML knowledge
     // base — see the ML branch below. Plain chit-chat isn't cached.)
     try {
-      botReply = await chatCompletion(openAiApiKey, [
+      const { content } = await chatCompletion(openAiApiKey, [
         { role: "system", content: GENERAL_SYSTEM_PROMPT },
         ...history,
       ]);
+      botReply = content;
     } catch (err) {
       console.error("chatConversation: non-ML chat completion failed", err);
-      return { status: 502, body: { error: "Failed to get response from AI" } };
+      return finish(502, { error: "Failed to get response from AI" });
     }
   } else {
     // ── ML path: embed → [cache check] → hybrid search → rerank → answer ──
@@ -834,14 +1055,40 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     // request over a logging write.
     logQueryRewriteAsync(ctx.supabase, message, rewrittenQuery);
 
+    const rewrittenQueryHash = await sha256Hex(rewrittenQuery);
+
     // Step 2: embed the rewritten query. This single embedding is reused
     // for BOTH the semantic cache lookup and (on a miss) hybrid search.
     let queryEmbedding: number[];
+    const embeddingStartedAt = Date.now();
     try {
-      queryEmbedding = await createEmbedding(openAiApiKey, rewrittenQuery);
+      const embeddingResult = await createEmbedding(openAiApiKey, rewrittenQuery);
+      queryEmbedding = embeddingResult.embedding;
+      logEvent("embedding_completed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "embedding",
+        model: EMBEDDING_MODEL,
+        input_length: rewrittenQuery.length,
+        embedding_dimensions: queryEmbedding.length,
+        duration_ms: Date.now() - embeddingStartedAt,
+        retry_count: embeddingResult.retryCount,
+        status: "success",
+      });
     } catch (err) {
+      const { errorType } = classifyError(err);
+      logEvent("embedding_failed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "embedding",
+        model: EMBEDDING_MODEL,
+        input_length: rewrittenQuery.length,
+        duration_ms: Date.now() - embeddingStartedAt,
+        status: "error",
+        error_type: errorType,
+      });
       console.error("chatConversation: embedding creation failed", err);
-      return { status: 502, body: { error: "Failed to process the question" } };
+      return finish(502, { error: "Failed to process the question" });
     }
 
     // Step 2b: semantic cache check. On a confident, fresh hit, we skip
@@ -849,42 +1096,114 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     // answer. Any cache problem (misconfigured, timed out, malformed,
     // stale) is treated as a miss and falls through to the normal
     // pipeline below — the cache can never cause a request to fail.
-    const cacheHit = await queryCache(queryEmbedding);
+    const cacheStartedAt = Date.now();
+    const cacheOutcome = await queryCache(queryEmbedding);
+    logEvent("cache_lookup_completed", {
+      request_id: requestId,
+      trace_id: traceId,
+      operation: "semantic_cache_lookup",
+      cache_enabled: cacheOutcome.cacheEnabled,
+      cache_hit: Boolean(cacheOutcome.hit),
+      cache_miss_reason: cacheOutcome.hit ? undefined : cacheOutcome.missReason,
+      similarity_score: cacheOutcome.similarityScore,
+      similarity_threshold: CACHE_SIMILARITY_THRESHOLD,
+      cache_entry_id: cacheOutcome.hit?.id,
+      cache_age_ms: cacheOutcome.cacheAgeMs,
+      duration_ms: Date.now() - cacheStartedAt,
+    });
 
-    if (cacheHit) {
-      botReply = cacheHit.answer;
+    if (cacheOutcome.hit) {
+      botReply = cacheOutcome.hit.answer;
+      cacheHitForLog = true;
     } else {
       // Step 3: hybrid (lexical + vector) search over the knowledge base.
       let candidates: HybridSearchResult[];
+      const searchStartedAt = Date.now();
       try {
         candidates = await performHybridSearch(ctx.supabase, rewrittenQuery, queryEmbedding);
+        logEvent("hybrid_search_completed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "hybrid_search",
+          query_hash: rewrittenQueryHash,
+          match_count_requested: HYBRID_MATCH_COUNT,
+          candidate_count_returned: candidates.length,
+          duration_ms: Date.now() - searchStartedAt,
+          top_candidate_ids: candidates.slice(0, 5).map((c) => c.id),
+          top_candidate_scores: candidates.slice(0, 5).map((c) => c.score),
+          document_version: KNOWLEDGE_BASE_VERSION,
+          status: "success",
+        });
       } catch (err) {
+        logEvent("hybrid_search_failed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "hybrid_search",
+          query_hash: rewrittenQueryHash,
+          match_count_requested: HYBRID_MATCH_COUNT,
+          duration_ms: Date.now() - searchStartedAt,
+          document_version: KNOWLEDGE_BASE_VERSION,
+          rpc_error: err instanceof Error ? err.message : String(err),
+          status: "error",
+        });
         console.error("chatConversation: hybrid search failed", err);
-        return { status: 500, body: { error: "Failed to search the knowledge base" } };
+        return finish(500, { error: "Failed to search the knowledge base" });
       }
 
       // Step 4: LLM-based rerank, with a safe fallback to the hybrid_search
       // ordering if the rerank call fails or returns nothing usable.
-      let topResults: HybridSearchResult[];
-      try {
-        topResults = await rerankResults(openAiApiKey, rewrittenQuery, candidates);
-      } catch (err) {
-        console.error("chatConversation: reranking failed, using raw hybrid order", err);
-        topResults = candidates.slice(0, RERANK_TOP_N);
-      }
+      const rerankStartedAt = Date.now();
+      const rerankOutcome = await rerankResults(openAiApiKey, rewrittenQuery, candidates);
+      logEvent("rerank_completed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "rerank",
+        model: CHAT_MODEL,
+        candidate_count: candidates.length,
+        rerank_top_n: RERANK_TOP_N,
+        reranked_ids: rerankOutcome.results.map((c) => c.id),
+        reranked_count: rerankOutcome.results.length,
+        fallback_used: rerankOutcome.fallbackUsed,
+        fallback_reason: rerankOutcome.fallbackReason,
+        duration_ms: Date.now() - rerankStartedAt,
+        input_tokens: rerankOutcome.usage?.promptTokens ?? null,
+        output_tokens: rerankOutcome.usage?.completionTokens ?? null,
+        retry_count: rerankOutcome.retryCount,
+        parse_success: rerankOutcome.parseSuccess,
+      });
+      const topResults = rerankOutcome.results;
 
       // Step 5: generate the final grounded answer.
+      const answerStartedAt = Date.now();
+      let answerContent: string;
+      let answerUsage: TokenUsage;
+      let answerRetryCount: number;
       try {
-        botReply = await generateGroundedAnswer(
+        const answerResult = await generateGroundedAnswer(
           openAiApiKey,
           historyWithoutLastTurn,
           rewrittenQuery,
           topResults,
         );
+        answerContent = answerResult.content;
+        answerUsage = answerResult.usage;
+        answerRetryCount = answerResult.retryCount;
       } catch (err) {
+        logEvent("answer_generation_failed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "generate_grounded_answer",
+          model: CHAT_MODEL,
+          context_chunk_count: topResults.length,
+          rewritten_query_hash: rewrittenQueryHash,
+          duration_ms: Date.now() - answerStartedAt,
+        });
         console.error("chatConversation: final answer generation failed", err);
-        return { status: 502, body: { error: "Failed to get response from AI" } };
+        return finish(502, { error: "Failed to get response from AI" });
       }
+
+      botReply = answerContent;
+      const contextBlock = buildContextBlock(topResults);
 
       // Step 6: populate the cache for future similar queries — but ONLY
       // if this turn is safe to persist into a cache shared by every
@@ -896,8 +1215,14 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       // similar query, which is a far smaller risk than persisting a
       // compromised answer where it could be served to other users. See
       // the security note on storeCacheAsync() for the full threat model.
-      if (!suspiciousContentFlagged) {
-        const { flagged: answerFlagged, checked: answerModerationChecked } = await moderateText(openAiApiKey, botReply);
+      const cacheWriteEligible = !suspiciousContentFlagged;
+      let answerModerationChecked = false;
+      let answerFlagged = false;
+
+      if (cacheWriteEligible) {
+        const modResult = await moderateText(openAiApiKey, botReply);
+        answerModerationChecked = modResult.checked;
+        answerFlagged = modResult.flagged;
 
         if (answerModerationChecked && !answerFlagged) {
           storeCacheAsync(queryEmbedding, rewrittenQuery, botReply);
@@ -912,8 +1237,30 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
           conversationId,
         });
       }
+
+      logEvent("answer_generation_completed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "generate_grounded_answer",
+        model: CHAT_MODEL,
+        context_chunk_count: topResults.length,
+        context_length: contextBlock.length,
+        context_document_ids: topResults.map((c) => c.id),
+        rewritten_query_hash: rewrittenQueryHash,
+        input_tokens: answerUsage.promptTokens,
+        output_tokens: answerUsage.completionTokens,
+        total_tokens: answerUsage.totalTokens,
+        duration_ms: Date.now() - answerStartedAt,
+        retry_count: answerRetryCount,
+        answer_length: botReply.length,
+        cache_write_eligible: cacheWriteEligible,
+        moderation_checked: answerModerationChecked,
+        moderation_flagged: answerFlagged,
+      });
     }
   }
+
+  requestLog.cache_hit = cacheHitForLog;
 
   // ── Persist the bot's reply ────────────────────────────────────────
   const { data: botMessage, error: botMsgError } = await ctx.supabase
@@ -928,8 +1275,8 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
 
   if (botMsgError) {
     console.error("chatConversation: failed to store bot message", botMsgError);
-    return { status: 500, body: { error: "Failed to store bot response" } };
+    return finish(500, { error: "Failed to store bot response" });
   }
 
-  return { status: 200, body: { reply: botMessage } };
+  return finish(200, { reply: botMessage });
 };
