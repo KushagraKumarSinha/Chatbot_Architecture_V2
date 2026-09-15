@@ -16,6 +16,42 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // ingestion/reindex run. Falls back to "unknown" if not set.
 const KNOWLEDGE_BASE_VERSION = Deno.env.get("KNOWLEDGE_BASE_VERSION") ?? "unknown";
 
+// ── Log identity/context (stamped onto every structured log line) ──────
+// Lets a log aggregator filter/group by service, environment, deploy
+// version, and region without parsing anything else in the line.
+const SERVICE_NAME = Deno.env.get("SERVICE_NAME") ?? "chat-conversation";
+const DEPLOY_ENV = Deno.env.get("DEPLOY_ENV") ?? "unknown";
+const SERVICE_VERSION = Deno.env.get("SERVICE_VERSION") ?? "unknown";
+const REGION = Deno.env.get("REGION"); // omitted from logs entirely if unset
+
+// ── Log hygiene / volume controls ───────────────────────────────────────
+// Untrusted client-supplied trace ids are capped and charset-restricted
+// before ever being written into a log line — an attacker-controlled
+// string of arbitrary length/content has no business ending up in your
+// log storage or your log-query syntax.
+const MAX_TRACE_ID_LENGTH = 128;
+const TRACE_ID_RE = /^[A-Za-z0-9._-]+$/;
+
+// Upstream error messages (e.g. a raw Postgres/Supabase error) can in
+// principle echo back query text or parameters. Truncate defensively and
+// redact obvious PII-shaped substrings before they're ever logged.
+const MAX_LOGGED_ERROR_LENGTH = 300;
+
+// Per-stage "completed successfully" logs (classify, embed, cache lookup,
+// search, rerank, answer) are the highest-volume lines in this handler.
+// VERBOSE_LOG_SAMPLE_RATE lets you dial that volume down in steady state
+// without losing visibility into failures: request_started,
+// input_validation_completed, every *_failed event, and the final
+// request_completed summary are ALWAYS logged regardless of this
+// setting. Defaults to 1.0 (log everything) if unset or invalid.
+const VERBOSE_LOG_SAMPLE_RATE = clampSampleRate(Deno.env.get("VERBOSE_LOG_SAMPLE_RATE"));
+
+function clampSampleRate(raw: string | undefined): number {
+  const parsed = raw === undefined ? 1 : Number.parseFloat(raw);
+  if (Number.isNaN(parsed)) return 1;
+  return Math.min(1, Math.max(0, parsed));
+}
+
 // Network resilience tuning. These are conservative defaults for a
 // user-facing chat endpoint — tune per your latency/cost budget.
 const OPENAI_TIMEOUT_MS = 15_000;
@@ -249,13 +285,68 @@ async function withRetry<T>(
 // counts, cache outcomes, etc). Nothing here ever throws — a logging
 // failure must never break the user-facing request.
 
-/** Emits one structured JSON log line. Never throws. */
+/**
+ * Emits one structured JSON log line. Never throws.
+ * Every line is stamped with service/env/version (and region, if set) so
+ * a log aggregator can filter/group across services without any of the
+ * per-call-site code needing to know about deployment context.
+ */
 function logEvent(event: string, fields: Record<string, unknown>): void {
   try {
-    console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...fields }));
+    console.log(
+      JSON.stringify({
+        event,
+        ts: new Date().toISOString(),
+        service: SERVICE_NAME,
+        env: DEPLOY_ENV,
+        version: SERVICE_VERSION,
+        ...(REGION ? { region: REGION } : {}),
+        ...fields,
+      }),
+    );
   } catch (err) {
     console.error("logEvent: failed to serialize log line", event, err);
   }
+}
+
+/**
+ * Validates a client-supplied trace id before it's ever trusted in a log
+ * line: must be a reasonably-short, plain identifier. Anything else
+ * (missing, oversized, containing control characters or log-injection
+ * payloads) is discarded in favor of a freshly minted trace id — an
+ * external caller should never be able to inject arbitrary content into
+ * your log stream via a header/field you pass straight through.
+ */
+function sanitizeTraceId(raw: unknown): string {
+  if (
+    typeof raw === "string" &&
+    raw.length > 0 &&
+    raw.length <= MAX_TRACE_ID_LENGTH &&
+    TRACE_ID_RE.test(raw)
+  ) {
+    return raw;
+  }
+  return `trace_${crypto.randomUUID()}`;
+}
+
+/** Redacts obviously PII-shaped substrings (emails, long digit runs) from free-text error messages. */
+function redactSensitive(text: string): string {
+  return text
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted-email]")
+    .replace(/\b\d{8,}\b/g, "[redacted-number]");
+}
+
+/**
+ * Converts any thrown error into a short, redacted, log-safe string.
+ * Upstream errors (Postgres/Supabase, OpenAI, Upstash) can in principle
+ * echo back query text, bound parameters, or other user-derived content
+ * in their message — this is the one place that free-text error content
+ * is allowed into a structured log line, so it's truncated and redacted
+ * unconditionally rather than trusting each call site to remember to.
+ */
+function safeErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  return redactSensitive(raw).slice(0, MAX_LOGGED_ERROR_LENGTH);
 }
 
 /**
@@ -836,8 +927,14 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
   // Accept an incoming trace id (e.g. from a distributed-tracing header
   // forwarded in the payload) so this request's logs can be joined with
   // an upstream trace; otherwise mint one so every request still has one.
-  const traceId =
-    (payload && typeof payload.trace_id === "string" && payload.trace_id) || `trace_${crypto.randomUUID()}`;
+  // sanitizeTraceId() rejects anything oversized or non-plain-text before
+  // it's trusted, since this value comes straight from the caller.
+  const traceId = sanitizeTraceId(payload?.trace_id);
+  // Sampling decision is made ONCE per request (not per log line) so that
+  // for any given request you either get the full set of verbose
+  // per-stage logs or none of them — never a partial, confusing trace.
+  // Failures and the final request summary always log regardless.
+  const shouldLogVerbose = Math.random() < VERBOSE_LOG_SAMPLE_RATE;
 
   // Accumulates the section-A "request entry and validation" fields as
   // they become known over the life of the request. Emitted as a single
@@ -994,23 +1091,28 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       ? await sha256Hex(classifyResult.rewrittenQuery)
       : null;
 
-    logEvent("classify_rewrite_completed", {
-      request_id: requestId,
-      trace_id: traceId,
-      operation: "classify_and_rewrite",
-      model: CHAT_MODEL,
-      is_ml_related: classifyResult.isMlRelated,
-      rewritten_query_length: classifyResult.rewrittenQuery.length,
-      rewritten_query_hash: rewrittenQueryHash,
-      history_message_count: history.length,
-      duration_ms: Date.now() - classifyStartedAt,
-      input_tokens: classifyResult.usage.promptTokens,
-      output_tokens: classifyResult.usage.completionTokens,
-      total_tokens: classifyResult.usage.totalTokens,
-      retry_count: classifyResult.retryCount,
-      parse_success: classifyResult.parseSuccess,
-      fallback_used: classifyResult.fallbackUsed,
-    });
+    // Sampled in steady state, but a fallback (parse failure, or an
+    // ML-classified message with an empty rewrite) is always logged —
+    // it silently changes which code path the request takes.
+    if (shouldLogVerbose || classifyResult.fallbackUsed) {
+      logEvent("classify_rewrite_completed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "classify_and_rewrite",
+        model: CHAT_MODEL,
+        is_ml_related: classifyResult.isMlRelated,
+        rewritten_query_length: classifyResult.rewrittenQuery.length,
+        rewritten_query_hash: rewrittenQueryHash,
+        history_message_count: history.length,
+        duration_ms: Date.now() - classifyStartedAt,
+        input_tokens: classifyResult.usage.promptTokens,
+        output_tokens: classifyResult.usage.completionTokens,
+        total_tokens: classifyResult.usage.totalTokens,
+        retry_count: classifyResult.retryCount,
+        parse_success: classifyResult.parseSuccess,
+        fallback_used: classifyResult.fallbackUsed,
+      });
+    }
   } catch (err) {
     const { errorType, errorStatus } = classifyError(err);
     logEvent("classify_rewrite_failed", {
@@ -1064,17 +1166,19 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     try {
       const embeddingResult = await createEmbedding(openAiApiKey, rewrittenQuery);
       queryEmbedding = embeddingResult.embedding;
-      logEvent("embedding_completed", {
-        request_id: requestId,
-        trace_id: traceId,
-        operation: "embedding",
-        model: EMBEDDING_MODEL,
-        input_length: rewrittenQuery.length,
-        embedding_dimensions: queryEmbedding.length,
-        duration_ms: Date.now() - embeddingStartedAt,
-        retry_count: embeddingResult.retryCount,
-        status: "success",
-      });
+      if (shouldLogVerbose) {
+        logEvent("embedding_completed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "embedding",
+          model: EMBEDDING_MODEL,
+          input_length: rewrittenQuery.length,
+          embedding_dimensions: queryEmbedding.length,
+          duration_ms: Date.now() - embeddingStartedAt,
+          retry_count: embeddingResult.retryCount,
+          status: "success",
+        });
+      }
     } catch (err) {
       const { errorType } = classifyError(err);
       logEvent("embedding_failed", {
@@ -1098,19 +1202,24 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     // pipeline below — the cache can never cause a request to fail.
     const cacheStartedAt = Date.now();
     const cacheOutcome = await queryCache(queryEmbedding);
-    logEvent("cache_lookup_completed", {
-      request_id: requestId,
-      trace_id: traceId,
-      operation: "semantic_cache_lookup",
-      cache_enabled: cacheOutcome.cacheEnabled,
-      cache_hit: Boolean(cacheOutcome.hit),
-      cache_miss_reason: cacheOutcome.hit ? undefined : cacheOutcome.missReason,
-      similarity_score: cacheOutcome.similarityScore,
-      similarity_threshold: CACHE_SIMILARITY_THRESHOLD,
-      cache_entry_id: cacheOutcome.hit?.id,
-      cache_age_ms: cacheOutcome.cacheAgeMs,
-      duration_ms: Date.now() - cacheStartedAt,
-    });
+    // Note: cache_hit itself is also carried on the always-on
+    // request_completed summary line below, so hit-rate monitoring
+    // doesn't depend on this (sampled) detail log surviving.
+    if (shouldLogVerbose) {
+      logEvent("cache_lookup_completed", {
+        request_id: requestId,
+        trace_id: traceId,
+        operation: "semantic_cache_lookup",
+        cache_enabled: cacheOutcome.cacheEnabled,
+        cache_hit: Boolean(cacheOutcome.hit),
+        cache_miss_reason: cacheOutcome.hit ? undefined : cacheOutcome.missReason,
+        similarity_score: cacheOutcome.similarityScore,
+        similarity_threshold: CACHE_SIMILARITY_THRESHOLD,
+        cache_entry_id: cacheOutcome.hit?.id,
+        cache_age_ms: cacheOutcome.cacheAgeMs,
+        duration_ms: Date.now() - cacheStartedAt,
+      });
+    }
 
     if (cacheOutcome.hit) {
       botReply = cacheOutcome.hit.answer;
@@ -1121,20 +1230,26 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       const searchStartedAt = Date.now();
       try {
         candidates = await performHybridSearch(ctx.supabase, rewrittenQuery, queryEmbedding);
-        logEvent("hybrid_search_completed", {
-          request_id: requestId,
-          trace_id: traceId,
-          operation: "hybrid_search",
-          query_hash: rewrittenQueryHash,
-          match_count_requested: HYBRID_MATCH_COUNT,
-          candidate_count_returned: candidates.length,
-          duration_ms: Date.now() - searchStartedAt,
-          top_candidate_ids: candidates.slice(0, 5).map((c) => c.id),
-          top_candidate_scores: candidates.slice(0, 5).map((c) => c.score),
-          document_version: KNOWLEDGE_BASE_VERSION,
-          status: "success",
-        });
+        if (shouldLogVerbose) {
+          logEvent("hybrid_search_completed", {
+            request_id: requestId,
+            trace_id: traceId,
+            operation: "hybrid_search",
+            query_hash: rewrittenQueryHash,
+            match_count_requested: HYBRID_MATCH_COUNT,
+            candidate_count_returned: candidates.length,
+            duration_ms: Date.now() - searchStartedAt,
+            top_candidate_ids: candidates.slice(0, 5).map((c) => c.id),
+            top_candidate_scores: candidates.slice(0, 5).map((c) => c.score),
+            document_version: KNOWLEDGE_BASE_VERSION,
+            status: "success",
+          });
+        }
       } catch (err) {
+        // hybrid_search_failed is NEVER sampled — failures must always be
+        // visible — and the error message is truncated/redacted via
+        // safeErrorMessage() since a Postgres/Supabase error can echo
+        // back query text or bound parameters.
         logEvent("hybrid_search_failed", {
           request_id: requestId,
           trace_id: traceId,
@@ -1143,7 +1258,7 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
           match_count_requested: HYBRID_MATCH_COUNT,
           duration_ms: Date.now() - searchStartedAt,
           document_version: KNOWLEDGE_BASE_VERSION,
-          rpc_error: err instanceof Error ? err.message : String(err),
+          rpc_error: safeErrorMessage(err),
           status: "error",
         });
         console.error("chatConversation: hybrid search failed", err);
@@ -1154,23 +1269,28 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       // ordering if the rerank call fails or returns nothing usable.
       const rerankStartedAt = Date.now();
       const rerankOutcome = await rerankResults(openAiApiKey, rewrittenQuery, candidates);
-      logEvent("rerank_completed", {
-        request_id: requestId,
-        trace_id: traceId,
-        operation: "rerank",
-        model: CHAT_MODEL,
-        candidate_count: candidates.length,
-        rerank_top_n: RERANK_TOP_N,
-        reranked_ids: rerankOutcome.results.map((c) => c.id),
-        reranked_count: rerankOutcome.results.length,
-        fallback_used: rerankOutcome.fallbackUsed,
-        fallback_reason: rerankOutcome.fallbackReason,
-        duration_ms: Date.now() - rerankStartedAt,
-        input_tokens: rerankOutcome.usage?.promptTokens ?? null,
-        output_tokens: rerankOutcome.usage?.completionTokens ?? null,
-        retry_count: rerankOutcome.retryCount,
-        parse_success: rerankOutcome.parseSuccess,
-      });
+      // Sampled in steady state, but a fallback (rerank call failed or
+      // returned nothing usable) is always logged — that's a degraded
+      // path worth seeing regardless of the sample rate.
+      if (shouldLogVerbose || rerankOutcome.fallbackUsed) {
+        logEvent("rerank_completed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "rerank",
+          model: CHAT_MODEL,
+          candidate_count: candidates.length,
+          rerank_top_n: RERANK_TOP_N,
+          reranked_ids: rerankOutcome.results.map((c) => c.id),
+          reranked_count: rerankOutcome.results.length,
+          fallback_used: rerankOutcome.fallbackUsed,
+          fallback_reason: rerankOutcome.fallbackReason,
+          duration_ms: Date.now() - rerankStartedAt,
+          input_tokens: rerankOutcome.usage?.promptTokens ?? null,
+          output_tokens: rerankOutcome.usage?.completionTokens ?? null,
+          retry_count: rerankOutcome.retryCount,
+          parse_success: rerankOutcome.parseSuccess,
+        });
+      }
       const topResults = rerankOutcome.results;
 
       // Step 5: generate the final grounded answer.
@@ -1238,25 +1358,30 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
         });
       }
 
-      logEvent("answer_generation_completed", {
-        request_id: requestId,
-        trace_id: traceId,
-        operation: "generate_grounded_answer",
-        model: CHAT_MODEL,
-        context_chunk_count: topResults.length,
-        context_length: contextBlock.length,
-        context_document_ids: topResults.map((c) => c.id),
-        rewritten_query_hash: rewrittenQueryHash,
-        input_tokens: answerUsage.promptTokens,
-        output_tokens: answerUsage.completionTokens,
-        total_tokens: answerUsage.totalTokens,
-        duration_ms: Date.now() - answerStartedAt,
-        retry_count: answerRetryCount,
-        answer_length: botReply.length,
-        cache_write_eligible: cacheWriteEligible,
-        moderation_checked: answerModerationChecked,
-        moderation_flagged: answerFlagged,
-      });
+      // Sampled in steady state, but a moderation-flagged answer (which
+      // skips the cache write) is always logged — that's a safety
+      // outcome worth seeing regardless of the sample rate.
+      if (shouldLogVerbose || answerFlagged) {
+        logEvent("answer_generation_completed", {
+          request_id: requestId,
+          trace_id: traceId,
+          operation: "generate_grounded_answer",
+          model: CHAT_MODEL,
+          context_chunk_count: topResults.length,
+          context_length: contextBlock.length,
+          context_document_ids: topResults.map((c) => c.id),
+          rewritten_query_hash: rewrittenQueryHash,
+          input_tokens: answerUsage.promptTokens,
+          output_tokens: answerUsage.completionTokens,
+          total_tokens: answerUsage.totalTokens,
+          duration_ms: Date.now() - answerStartedAt,
+          retry_count: answerRetryCount,
+          answer_length: botReply.length,
+          cache_write_eligible: cacheWriteEligible,
+          moderation_checked: answerModerationChecked,
+          moderation_flagged: answerFlagged,
+        });
+      }
     }
   }
 
