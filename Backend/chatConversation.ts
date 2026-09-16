@@ -5,6 +5,12 @@ import { HandlerFn } from "./types.ts";
 // ─────────────────────────────────────────────────────────────────────────
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_HISTORY_MESSAGES = 10;
+// Defensive cap on the LLM-produced rewritten query. It's normally a short
+// paraphrase of the user's message, but a pathological/adversarial model
+// output shouldn't be allowed to inflate embedding cost, get logged in
+// full, or bloat the semantic cache. Anything over this is truncated
+// before it's ever embedded, searched, or cached.
+const MAX_REWRITTEN_QUERY_LENGTH = 2000;
 const HYBRID_MATCH_COUNT = 20;
 const RERANK_TOP_N = 5;
 const RERANK_SNIPPET_LENGTH = 800;
@@ -767,7 +773,9 @@ async function classifyAndRewrite(
   try {
     const parsed = JSON.parse(raw);
     const isMlRelated = parsed?.is_ml_related === true;
-    const rewrittenQuery = typeof parsed?.rewritten_query === "string" ? parsed.rewritten_query.trim() : "";
+    const rewrittenQueryRaw = typeof parsed?.rewritten_query === "string" ? parsed.rewritten_query.trim() : "";
+    // Defensive cap — see MAX_REWRITTEN_QUERY_LENGTH definition.
+    const rewrittenQuery = rewrittenQueryRaw.slice(0, MAX_REWRITTEN_QUERY_LENGTH);
 
     if (isMlRelated && !rewrittenQuery) {
       console.error("classifyAndRewrite: ML-related but rewritten_query was empty; failing safe to non-ML path", raw);
@@ -1027,7 +1035,59 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     return finish(400, { error: "Message violates content policy" });
   }
 
-  // ── Persist the user's message before generating a reply ─────────────
+  // ── Load prior history (oldest → newest) BEFORE persisting this turn ──
+  // Fetching prior messages first — rather than inserting the current
+  // message and then re-querying for "recent history" — avoids a
+  // read-after-write race: if Supabase ever serves that follow-up read
+  // from a lagging replica, the just-inserted message could silently be
+  // missing from the result, truncating context for classification and
+  // generation with no error raised anywhere. Fetching first and
+  // appending the current turn locally makes that failure mode
+  // impossible regardless of replication behavior.
+  //
+  // We only need MAX_HISTORY_MESSAGES - 1 prior messages here, since the
+  // current turn (already in hand as `message`) fills the last slot.
+  // `.order()` includes an explicit secondary key on `id` (assumed to be
+  // a monotonically increasing/sortable primary key) so that two
+  // messages inserted in the same millisecond — plausible under load or
+  // with clock skew across app instances — still sort deterministically;
+  // relying on `created_at` alone leaves that order undefined. Adjust the
+  // secondary column name if your `messages` table's primary key differs.
+  const priorHistoryLimit = Math.max(0, MAX_HISTORY_MESSAGES - 1);
+  const { data: priorHistoryDesc, error: historyError } = await ctx.supabase
+    .from("messages")
+    .select("id, messages, by, created_at")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(priorHistoryLimit);
+
+  if (historyError) {
+    console.error("chatConversation: failed to fetch history", historyError);
+    return finish(500, { error: "Failed to fetch conversation history" });
+  }
+
+  const priorHistory: ChatMessage[] = (priorHistoryDesc ?? [])
+    .slice()
+    .reverse()
+    .map((m: { messages: string; by: string }) => ({
+      role: m.by === "bot" ? "assistant" : "user",
+      content: m.messages,
+    }));
+
+  // The current user turn, appended locally rather than re-fetched.
+  const history: ChatMessage[] = [...priorHistory, { role: "user", content: message }];
+
+  // Note: if MAX_HISTORY_MESSAGES is ever set to 1, `priorHistory` becomes
+  // empty and the grounded-answer call below loses all prior context (it
+  // will still see the current turn). Not an issue at the current
+  // default, but worth keeping in mind if that constant changes.
+  const historyWithoutLastTurn = priorHistory;
+
+  // ── Persist the user's message ────────────────────────────────────────
+  // Done AFTER the history read above (see race-condition note), but
+  // still before any generation work, so the user's turn is durably
+  // stored even if a downstream LLM/search call fails.
   const { error: userMsgError } = await ctx.supabase
     .from("messages")
     .insert({
@@ -1040,33 +1100,6 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
     console.error("chatConversation: failed to store user message", userMsgError);
     return finish(500, { error: "Failed to store user message" });
   }
-
-  // ── Load recent history (oldest → newest) for context ─────────────────
-  const { data: recentHistoryDesc, error: historyError } = await ctx.supabase
-    .from("messages")
-    .select("messages, by, created_at")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false })
-    .limit(MAX_HISTORY_MESSAGES);
-
-  if (historyError) {
-    console.error("chatConversation: failed to fetch history", historyError);
-    return finish(500, { error: "Failed to fetch conversation history" });
-  }
-
-  const history: ChatMessage[] = (recentHistoryDesc ?? [])
-    .slice()
-    .reverse()
-    .map((m: { messages: string; by: string }) => ({
-      role: m.by === "bot" ? "assistant" : "user",
-      content: m.messages,
-    }));
-
-  // Note: if MAX_HISTORY_MESSAGES is ever set to 1, this becomes empty and
-  // the grounded-answer call below loses all prior context. Not an issue
-  // at the current default, but worth keeping in mind if that constant
-  // changes.
-  const historyWithoutLastTurn = history.slice(0, -1);
 
   requestLog.history_count = history.length;
   logEvent("input_validation_completed", {
@@ -1335,26 +1368,41 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       // similar query, which is a far smaller risk than persisting a
       // compromised answer where it could be served to other users. See
       // the security note on storeCacheAsync() for the full threat model.
-      const cacheWriteEligible = !suspiciousContentFlagged;
-      let answerModerationChecked = false;
-      let answerFlagged = false;
+      // The generated answer is always moderated (independent of the
+      // cache-write eligibility below): a flagged answer should never
+      // reach the user, cache or no cache. This is a deliberate behavior
+      // change from "moderation only gates the cache write" — returning a
+      // moderation-flagged answer to a user is a bigger risk than the
+      // (rare) false positive of blocking a benign one. Fails soft on a
+      // moderation-check outage, consistent with the input-side check
+      // above: `checked: false` is treated as "not flagged", since an
+      // outage shouldn't take support chat down entirely.
+      const modResult = await moderateText(openAiApiKey, botReply);
+      const answerModerationChecked = modResult.checked;
+      const answerFlagged = modResult.flagged;
+
+      if (answerModerationChecked && answerFlagged) {
+        console.warn("chatConversation: generated answer flagged by moderation, substituting safe fallback", {
+          conversationId,
+        });
+        botReply = "I'm not able to share that response. Could you rephrase your question, or contact support directly for help?";
+      }
+
+      // Cache write is additionally gated on the injection heuristic — see
+      // the security note on storeCacheAsync() for why an ungated write
+      // to this shared, cross-user cache is dangerous.
+      const cacheWriteEligible = !suspiciousContentFlagged && answerModerationChecked && !answerFlagged;
 
       if (cacheWriteEligible) {
-        const modResult = await moderateText(openAiApiKey, botReply);
-        answerModerationChecked = modResult.checked;
-        answerFlagged = modResult.flagged;
-
-        if (answerModerationChecked && !answerFlagged) {
-          storeCacheAsync(queryEmbedding, rewrittenQuery, botReply);
-        } else {
-          console.warn("chatConversation: skipping cache write", {
-            conversationId,
-            reason: !answerModerationChecked ? "moderation check failed" : "answer flagged by moderation",
-          });
-        }
+        storeCacheAsync(queryEmbedding, rewrittenQuery, botReply);
       } else {
-        console.warn("chatConversation: skipping cache write due to suspicious input pattern", {
+        console.warn("chatConversation: skipping cache write", {
           conversationId,
+          reason: suspiciousContentFlagged
+            ? "suspicious input pattern"
+            : !answerModerationChecked
+              ? "moderation check failed"
+              : "answer flagged by moderation",
         });
       }
 
