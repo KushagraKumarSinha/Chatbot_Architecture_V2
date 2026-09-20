@@ -146,6 +146,7 @@ const payloadSchemas: Record<string, z.ZodTypeAny> = {
   }),
   "delete-conversation": z.object({
     conversation_id: z.string().uuid(),
+    title: z.string().min(1).max(200),
   }),
 };
 
