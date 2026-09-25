@@ -1,17 +1,5 @@
 # `index.ts` — API Router Documentation
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Request Flow](#request-flow)
-  - [Flow Diagram](#flow-diagram)
-- [Function Reference](#function-reference)
-- [Key Data Structures](#key-data-structures)
-- [Configuration (Environment Variables)](#configuration-environment-variables)
-- [Guardrails Summary](#guardrails-summary)
-
----
-
 ## Overview
 
 This file is the **single HTTP entry point** for the API. It is a Deno-based router that receives all incoming requests, applies cross-cutting concerns (CORS, rate limiting, authentication, validation, logging/alerting), and dispatches each request to the appropriate business-logic handler (`createConversation`, `readConversation`, `getPastConversations`, `chatConversation`, `deleteConversation`).
