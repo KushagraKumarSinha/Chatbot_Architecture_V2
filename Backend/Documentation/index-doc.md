@@ -104,13 +104,13 @@ Return handler's { status, body } as JSON
 
 ## Function Reference
 
-### `logStructured(level, event, context)`
+### logStructured(level, event, context):
 Emits a single structured JSON log line containing a timestamp, severity
 `level` (`"error" | "warn" | "info"`), an `event` name, and arbitrary
 `context` fields. Routes to `console.error`, `console.warn`, or
 `console.info` depending on `level`.
 
-### `sendAlertWebhook(payload)`
+### sendAlertWebhook(payload):
 POSTs an alert `payload` to `ALERT_WEBHOOK_URL` (e.g. a Slack incoming
 webhook) with a 3-second timeout (`ALERT_WEBHOOK_TIMEOUT_MS`).
 - If `ALERT_WEBHOOK_URL` is not configured, logs a warning
@@ -119,7 +119,7 @@ webhook) with a 3-second timeout (`ALERT_WEBHOOK_TIMEOUT_MS`).
 - If the webhook request fails or times out, logs an error but never
   throws, so alerting failures can't crash the request pipeline.
 
-### `alertRateLimiterFailedOpen({ scope, identifier, requestId })`
+### alertRateLimiterFailedOpen({ scope, identifier, requestId }):
 Called whenever the rate limiter fails open (i.e. it couldn't reach Redis
 and defaulted to allowing the request through). Behavior:
 - Always logs an error (`rate_limiter_failed_open`) with the scope
@@ -131,7 +131,7 @@ and defaulted to allowing the request through). Behavior:
   counted via `suppressedSinceLastAlert` and reported in the next alert
   that does go out.
 
-### `getClientIp(req)`
+### getClientIp(req):
 Extracts the real client IP address from the `x-forwarded-for` header,
 accounting for a configurable number of trusted proxy hops
 (`TRUSTED_PROXY_HOPS`, default `1`). This prevents a client from spoofing
@@ -139,19 +139,19 @@ their IP by injecting fake entries into the header — only the hop at the
 trusted position (counting from the end of the list) is used. Returns
 `"unknown"` if the header is missing or empty.
 
-### `safeLookup(source, key)`
+### safeLookup(source, key):
 A prototype-pollution-safe alternative to `source[key]`. Uses
 `Object.prototype.hasOwnProperty.call(...)` to ensure the key is an own
 property of `source` before returning it, preventing lookups like
 `"__proto__"` or `"constructor"` from resolving to unintended values.
 
-### `tooManyRequestsResponse(retryAfterSeconds, extra?)`
+### tooManyRequestsResponse(retryAfterSeconds, extra?):
 Builds and returns a `429 Too Many Requests` HTTP `Response`, including a
 `Retry-After` header (rounded up, minimum 1 second) and a JSON body with
 an `error` message, `retryAfterSeconds`, and any additional `extra`
 fields.
 
-### `Deno.serve(async (req) => { ... })`
+### Deno.serve(async (req) => { ... }):
 The main request handler — implements the full request flow described
 above. This is the single entry point for every HTTP request the service
 receives.
