@@ -1,3 +1,4 @@
+<img width="959" height="350" alt="image" src="https://github.com/user-attachments/assets/a367c093-c76b-46b3-a29d-4a14fdb8e1e1" />
 
 ```mermaid
 flowchart TD
