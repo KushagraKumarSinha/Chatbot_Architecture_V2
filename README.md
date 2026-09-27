@@ -1,4 +1,10 @@
+# Machine Learning expert chatbot application
+
+Am improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**
+
 <img width="959" height="350" alt="image" src="https://github.com/user-attachments/assets/a367c093-c76b-46b3-a29d-4a14fdb8e1e1" />
+
+## Flowchart
 
 ```mermaid
 flowchart TD
@@ -131,3 +137,12 @@ flowchart TD
     class CC1a,CC2a,CC3a,RC1a,RC2a,RC3a,GP1a,GP2a,GP3a,GP4a,GP4b,GP5a,DC1a,DC2a,DC3a,DC3b,DC4a,DC5a errorpath
     class CC4,RC4,GP7,DC6 entry
 ```
+
+## Learn More
+
+For info about the concepts used in this project, refer to:
+
+- **[API notes](https://github.com/KushagraKumarSinha/API_notes_and_examples)**
+- **[Backend concept notes](https://github.com/KushagraKumarSinha/Backend_Concept_Notes)**
+- **[AI agent notes](https://github.com/KushagraKumarSinha/AI_Agent_Notes)**
+
