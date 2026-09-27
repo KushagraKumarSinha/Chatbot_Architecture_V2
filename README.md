@@ -1,4 +1,4 @@
-# Machine Learning expert chatbot application
+# Machine Learning expert chatbot application 2.0
 
 Am improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**
 
