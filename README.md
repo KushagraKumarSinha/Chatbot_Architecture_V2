@@ -1,6 +1,6 @@
 # Machine Learning expert chatbot application 2.0
 
-Am improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**
+Improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**
 
 <img width="959" height="350" alt="image" src="https://github.com/user-attachments/assets/a367c093-c76b-46b3-a29d-4a14fdb8e1e1" />
 
