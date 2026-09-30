@@ -1,6 +1,11 @@
 # Machine Learning expert chatbot application 2.0
 
-Improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**
+Improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Architecture_V1)**:
+1) Implemented Router and Registry pattern
+2) Added structured logging
+3) Added better error handling and retry logic
+4) Created evaluation set
+5) Accounted for prompt injection
 
 <img width="959" height="350" alt="image" src="https://github.com/user-attachments/assets/a367c093-c76b-46b3-a29d-4a14fdb8e1e1" />
 
