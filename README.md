@@ -7,6 +7,10 @@ Improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Archite
 4) Created evaluation set
 5) Accounted for prompt injection
 
+Improvements to this:
+1) Adding proxy before request hits backend
+2) Improving security in the frontend
+
 <img width="959" height="350" alt="image" src="https://github.com/user-attachments/assets/a367c093-c76b-46b3-a29d-4a14fdb8e1e1" />
 
 ## Flowchart
