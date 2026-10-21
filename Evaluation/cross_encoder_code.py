@@ -1,3 +1,5 @@
+# Code for how to check similarity between a reference sentence and test sentences -> Used in checking retrieval quality
+
 # pip install sentence-transformers pandas numpy
 
 import numpy as np
