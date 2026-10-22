@@ -1,0 +1,1073 @@
+[
+    {
+        "question": "How does a next-token predictor generate an entire passage autoregressively?",
+        "gold_answer": "Predict a distribution over the next token, select a token, append it to the context, and repeat. Each prediction conditions on the original prompt and the tokens already generated.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "nd of sequence token is generated.\nToday, this approach of using a language model to incrementally generate words\nby repeatedly sampling the next word conditioned on our previous choices is called\nautoregressive generation or causal LM generation . The procedure is basicallyautoregressive\ngeneration\nthe same as that described on page ??, but adapted to a neural context:\n• Sample a word in the output from the softmax distribution that results from\nusing the beginning of sentence marker, <s>, as the ﬁrst input.\n• Use the word embedding for that ﬁrst word as the input to the network at the\nnext time step, and then sample the next word in the same fashion.\n• Continue generating until the end of sentence marker, </s>, is sampled or a\nﬁxed length limit is reached.\nTechnically an autoregressive m",
+                "cross-encoder similarity (%)": 92.83
+            },
+            "retrieval_2": {
+                "text": "ve, decoding from a languagedecoding\nmodel in a left-to-right manner (or right-to-left for languages like Arabic in which\nwe read from right to left), and thus repeatedly choosing the next token conditioned\non our previous choices is called causal or autoregressive generation.1causal\nautoregressive\ngeneration\n7.4.1 Greedy decoding\nThe simplest way to generate tokens is to always generate the most likely token\ngiven the context, which is called greedy decoding. A greedy algorithm is onegreedy\ndecoding\nthat makes a choice that is locally optimal, whether or not it will turn out to have\nbeen the best choice with hindsight. Thus in greedy decoding, at each time step in\ngeneration, we turn the logits into a probability distribution over tokens and then we\nchoose as the output wt the token in th",
+                "cross-encoder similarity (%)": 85.88
+            },
+            "retrieval_3": {
+                "text": "ts added\nonto the context as a preﬁx for generating the next token.\nFig. 7.2 shows the same example from Fig. 7.1, in which a language model\nis given a text preﬁx and generates a possible completion. The model selects the\nword all, adds that to the context, uses the updated context to get a new predictive\ndistribution, and then selects the from that distribution and generates it, and so\non. Notice that the model is conditioning on both the priming context and its own\nsubsequently generated outputs.\nThis kind of setting in which we iteratively predict and generate words left-to-",
+                "cross-encoder similarity (%)": 51.88
+            },
+            "retrieval_4": {
+                "text": "a distribution over tokens that we can sample. And we’ll\ndescribe architecture-agnostic mechanisms for learning and decoding.\n7.2 Conditional Generation of Text: The Intuition\nA fundamental intuition underlying language models is that almost anything we\nwant to do with language can be modeled as conditional generation of text. (Weconditional\ngeneration\nmean decoder language models, which are what we will discuss in this chapter and\nthe next).\nConditional generation is the task of generating text conditioned on an input\npiece of text. That is, we give the LLM an input piece of text, a prompt, and\nthen have the LLM continue generating text token by token, conditioned on the\nprompt and the subsequently generated tokens. We generate from a model by ﬁrst\ncomputing the probability of the next to",
+                "cross-encoder similarity (%)": 0.04
+            },
+            "retrieval_5": {
+                "text": "ational system that can predict the next word from previous\nwords. That is, given a context or preﬁx of words, a language model assigns a\nprobability distribution over the possible next words. Fig. 7.1 sketches this idea.\nOf course we’ve already seen language models! We saw n-gram language mod-\nels in Chapter 3 and brieﬂy touched on the feedforward network applied to language",
+                "cross-encoder similarity (%)": 0.02
+            }
+        }
+    },
+    {
+        "question": "Does BPE relearn merges when encoding new text?",
+        "gold_answer": "Apply the learned merges in training order. New-text frequencies do not retrain or reorder the merges.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "2.4 • S UBWORD TOKENIZATION : B YTE -PAIR ENCODING 13\n2.4.2 BPE encoder\nOnce we’ve learned our vocabulary, the BPE encoder is used to tokenize a test\nsentence. The encoder just runs on the test data the merges we have learned from\nthe training data. It runs them greedily, in the order we learned them. (Thus the\nfrequencies in the test data don’t play a role, just the frequencies in the training\ndata). So ﬁrst we segment each test sentence word into characters. Then we apply\nthe ﬁrst rule: replace every instance of n e in the test corpus with ne, and then the\nsecond rule: replace every instance of ne w in the test corpus with new, and so on.\nBy the end of course many of the merges simple recreated words in the training\nset. But the merges also created knowledge of morphemes like the re- pre",
+                "cross-encoder similarity (%)": 95.51
+            },
+            "retrieval_2": {
+                "text": "kenization. They then run a second stage of BPE allowing merges across spaces and\npunctuation. The result is a large set of tokens that can be more efﬁcient (Fig. 2.7).\nPreprint\nFigure 1: SuperBPE tokenizers encode text much more efﬁciently than BPE, and the\ngap grows with larger vocabulary size. Encoding efﬁciency ( y-axis) is measured with\nbytes-per-token, the number of bytes encoded per token on average over a large corpus of text.\nIn the above text with 40 bytes, SuperBPE uses 7 tokens and BPE uses 13, so the methods’\nefﬁciencies are 40 /7 = 5.7 and 40 /13 = 3.1 bytes-per-token, respectively . In the graph,\nthe encoding efﬁciency of BPE plateaus early due to exhausting the valuable whitespace-\ndelimited words in the training data. In fact, it is bounded above by the gray dotted line,\nw",
+                "cross-encoder similarity (%)": 93.82
+            },
+            "retrieval_3": {
+                "text": "tL + tR # make new token by concatenating\nV←V + tNEW # update the vocabulary\nReplace each occurrence of tL, tR in C with tNEW # and update the corpus\nreturn V\nFigure 2.6 The training part of the BPE algorithm for taking a corpus broken up into in-\ndividual characters or bytes, and learning a vocabulary by iteratively merging tokens. Figure\nadapted from Bostrom and Durrett (2020).",
+                "cross-encoder similarity (%)": 73.39
+            },
+            "retrieval_4": {
+                "text": "gual systems, the tokens can be dominated by\nEnglish, leaving fewer tokens for other languages, as we’ll discuss below.\n2.4.3 BPE in practice\nThe example above just showed simple BPE learning from sequences of ASCII\nbytes. How does BPE work with Unicode input? We normally run BPE on the\nindividual bytes of UTF-8-encoded text. That is, we take a Unicode representations\nof text as a series of code points, encode it in bytes using UTF-8, and we treat each of\nthese individual bytes as the input to BPE. Thus BPE likely begins by rediscovering\nthe 2-byte and common 3-byte sequences that UTF-8 uses to encode various code\npoints. Again, running BPE only inside presegmented words helps avoid problems.\nBecause there are only 256 possible values of a byte, there will be no unknown to-\nkens, although",
+                "cross-encoder similarity (%)": 17.81
+            },
+            "retrieval_5": {
+                "text": "( Sennrich et al. , 2016): whitespace pretokenization is\ninitially used to enforce learning of subword tokens only (as done in conventional BPE), but\nis disabled in a second stage, where the tokenizer transitions to learning superword tokens.\nNotably , SuperBPE tokenizers scale much better with vocabulary size—while BPE quickly\nhits a point of diminishing returns and begins adding increasingly rare subwords to the\nvocabulary , SuperBPE can continue to discover common word sequences to treat as single\ntokens and improve encoding efﬁciency (see Figure 1).\nIn our main experiments, we pretrain English LMs at 8B scale from scratch. When ﬁxing the\nmodel size, vocabulary size, and training compute—varying only the algorithm for learning\nthe vocabulary—we ﬁnd that models trained with SuperBPE tok",
+                "cross-encoder similarity (%)": 2.15
+            }
+        }
+    },
+    {
+        "question": "Why is an unseen bigram a problem for an unsmoothed language model, and how does smoothing help?",
+        "gold_answer": "A zero-probability bigram makes any sequence containing it have zero probability. Smoothing reallocates some probability mass to unseen events, avoiding these zeros.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": ".\n• N-gram language models can be evaluated on a test set using perplexity.\n• The perplexity of a test set according to a language model is a function of\nthe probability of the test set: the inverse test set probability according to the\nmodel, normalized by the length.\n• Sampling from a language model means to generate some sentences, choos-\ning each sentence according to its likelihood as deﬁned by the model.\n• Smoothing algorithms provide a way to estimate probabilities for events that\nwere unseen in training. Commonly used smoothing algorithms for n-grams\ninclude add-1 smoothing, or rely on lower-order n-gram counts throughinter-\npolation.\nHistorical Notes\nThe underlying mathematics of the n-gram was ﬁrst proposed by Markov (1913),\nwho used what are now called Markov chains (bigrams and",
+                "cross-encoder similarity (%)": 78.79
+            },
+            "retrieval_2": {
+                "text": "1, the counts of 1 will be 2, and so on. This algorithm is called\nLaplace smoothing. Laplace smoothing does not perform well enough to be usedLaplace\nsmoothing\nin modern n-gram models, but it usefully introduces many of the concepts that we\nsee in other smoothing algorithms, gives a useful baseline, and is also a practical\nsmoothing algorithm for other tasks like text classiﬁcation (Appendix K).\nLet’s start with the application of Laplace smoothing to unigram probabilities.\nRecall that the unsmoothed maximum likelihood estimate of the unigram probability",
+                "cross-encoder similarity (%)": 21.46
+            },
+            "retrieval_3": {
+                "text": "ere ﬁrst used for this technology by the\nIBM group. Jelinek and his colleagues used the term language model in a pretty\nmodern way, to mean the entire set of linguistic inﬂuences on word sequence prob-\nabilities, including grammar, semantics, discourse, and even speaker characteristics,\nrather than just the particular n-gram model itself.\nAdd-one smoothing derives from Laplace’s 1812 law of succession and was ﬁrst\napplied as an engineering solution to the zero frequency problem by Jeffreys (1948)\nbased on an earlier Add-K suggestion by Johnson (1932). Problems with the add-\none algorithm are summarized in Gale and Church (1994).\nA wide variety of different language modeling and smoothing techniques were\nproposed in the 80s and 90s, including Good-Turing discounting—ﬁrst applied to the\nn-gr",
+                "cross-encoder similarity (%)": 15.56
+            },
+            "retrieval_4": {
+                "text": "3.6 • S MOOTHING , INTERPOLATION , AND BACKOFF 15\nof the word wi is its count ci normalized by the total number of word tokens N:\nP(wi) = ci\nN\nLaplace smoothing merely adds one to each count (hence its alternate name add-\none smoothing). Since there are V words in the vocabulary and each one was in-add-one\ncremented, we also need to adjust the denominator to take into account the extra V\nobservations. (What happens to our P values if we don’t increase the denominator?)\nPLaplace(wi) = ci + 1\nN +V (3.24)\nNow that we have the intuition for the unigram case, let’s smooth our Berkeley\nRestaurant Project bigrams. Figure 3.6 shows the add-one smoothed counts for the\nbigrams in Fig. 3.1.\ni want to eat chinese food lunch spend\ni 6 828 1 10 1 1 1 3\nwant 3 1 609 2 7 7 6 2\nto 3 1 5 687 3 1 7 212\neat 1",
+                "cross-encoder similarity (%)": 9.65
+            },
+            "retrieval_5": {
+                "text": "3.6 • S MOOTHING , INTERPOLATION , AND BACKOFF 17\nlanguage modeling, generating counts with poor variances and often inappropriate\ndiscounts (Gale and Church, 1994).\n3.6.3 Language Model Interpolation\nThere is an alternative source of knowledge we can draw on to solve the problem\nof zero frequency n-grams. If we are trying to compute P(wn|wn−2wn−1) but we\nhave no examples of a particular trigram wn−2wn−1wn, we can instead estimate its\nprobability by using the bigram probability P(wn|wn−1). Similarly, if we don’t have\ncounts to compute P(wn|wn−1), we can look to the unigram P(wn). In other words,\nsometimes using less context can help us generalize more for contexts that the model\nhasn’t learned much about.\nThe most common way to use this n-gram hierarchy is called interpolation:interpolatio",
+                "cross-encoder similarity (%)": 8.1
+            }
+        }
+    },
+    {
+        "question": "Why can high accuracy hide a useless classifier when the positive class is rare?",
+        "gold_answer": "Predicting only the majority negative class can achieve high accuracy while missing every positive. Positive-class recall exposes the missed positives; precision measures the reliability of positive predictions.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "tweets about something completely unrelated. Imagine a\nsimple classiﬁer that stupidly classiﬁed every tweet as “not about pie”. This classiﬁer\nwould have 999,900 true negatives and only 100 false negatives for an accuracy of\n999,900/1,000,000 or 99.99%! What an amazing accuracy level! Surely we should\nbe happy with this classiﬁer? But of course this fabulous ‘no pie’ classiﬁer would\nbe completely useless, since it wouldn’t ﬁnd a single one of the customer comments\nwe are looking for. In other words, accuracy is not a good metric when the goal is\nto discover something that is rare, or at least not completely balanced in frequency,\nwhich is a very common situation in the world.\nThat’s why instead of accuracy we generally turn to two other metrics shown in\nFig. 4.7: precision and recall. Prec",
+                "cross-encoder similarity (%)": 97.01
+            },
+            "retrieval_2": {
+                "text": "ns (system output and gold labels), and each cell labeling\na set of possible outcomes. In the spam detection case, for example, true positives\nare documents that are indeed spam (indicated by human-created gold labels) that\nour system correctly said were spam. False negatives are documents that are indeed\nspam but our system incorrectly labeled as non-spam.\nTo the bottom right of the table is the equation for accuracy, which asks what\npercentage of all the observations (for the spam or pie examples that means all emails\nor tweets) our system labeled correctly. Although accuracy might seem a natural\nmetric, we generally don’t use it for text classiﬁcation tasks. That’s because accuracy\ndoesn’t work well when the classes are unbalanced (as indeed they are with spam,\nwhich is a large majority",
+                "cross-encoder similarity (%)": 36.9
+            },
+            "retrieval_3": {
+                "text": "t work well when the classes are unbalanced (as indeed they are with spam,\nwhich is a large majority of email, or with tweets, which are mainly not about pie).\ntrue positive\nfalse negative\nfalse positive\ntrue negative\ngold positivegold negative\nsystem\npositive\nsystem\nnegative\ngold standard labels\nsystem\noutput\nlabels\nrecall = tp\ntp+fn\nprecision = tp\ntp+fp\naccuracy = tp+tn\ntp+fp+tn+fn\nFigure 4.7 A confusion matrix for visualizing how well a binary classiﬁcation system per-\nforms against gold standard labels.\nTo make this more explicit, imagine that we looked at a million tweets, and\nlet’s say that only 100 of them are discussing their love (or hatred) for our pie,\nwhile the other 999,900 are tweets about something completely unrelated. Imagine a\nsimple classiﬁer that stupidly classiﬁed ever",
+                "cross-encoder similarity (%)": 13.92
+            }
+        }
+    },
+    {
+        "question": "Why normalize vectors when using cosine similarity, and when does cosine equal a dot product?",
+        "gold_answer": "Cosine divides the dot product by both vector lengths, reducing magnitude effects. For nonzero vectors normalized to unit length, their dot product equals cosine similarity.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "wo words are regardless of their frequency.\nWe modify the dot product to normalize for the vector length by dividing the\ndot product by the lengths of each of the two vectors. Thisnormalized dot product\nturns out to be the same as the cosine of the angle between the two vectors, following\nfrom the deﬁnition of the dot product between two vectors a and b:\na· b = |a||b|cos θ\na· b\n|a||b| = cos θ (5.9)\nThe cosine similarity metric between two vectors v and w thus can be computed as:cosine\ncosine(v, w) = v· w\n|v||w| =\nN∑\ni=1\nviwi\nvuu√\nN∑\ni=1\nv2\ni\nvuu√\nN∑\ni=1\nw2\ni\n(5.10)\nFor some applications we pre-normalize each vector, by dividing it by its length,\ncreating a unit vector of length 1. Thus we could compute a unit vector from a byunit vector\ndividing it by|a|. For unit vectors, the dot product",
+                "cross-encoder similarity (%)": 99.73
+            },
+            "retrieval_2": {
+                "text": "uld compute a unit vector from a byunit vector\ndividing it by|a|. For unit vectors, the dot product is the same as the cosine.\nThe cosine value ranges from 1 for vectors pointing in the same direction, through\n0 for orthogonal vectors, to -1 for vectors pointing in opposite directions. But since\nraw frequency values are non-negative, the cosine for these vectors ranges from 0–1.\nLet’s see how the cosine computes which of the wordscherry or digital is closer\nin meaning to information, just using raw counts from the following shortened table:\npie data computer\ncherry 442 8 2\ndigital 5 1683 1670\ninformation 5 3982 3325\ncos(cherry,information) = 442∗ 5 + 8∗ 3982 + 2∗ 3325√\n4422 + 82 + 22√\n52 + 39822 + 33252 = .018\ncos(digital,information) = 5∗ 5 + 1683∗ 3982 + 1670∗ 3325√\n52 + 16832 + 16702√\n5",
+                "cross-encoder similarity (%)": 97.09
+            },
+            "retrieval_3": {
+                "text": "5.4 • C OSINE FOR MEASURING SIMILARITY 9\nhave zeros in different dimensions—orthogonal vectors—will have a dot product of\n0, representing their strong dissimilarity.\nThis raw dot product, however, has a problem as a similarity metric: it favors\nlong vectors. The vector length is deﬁned asvector length\n|v| =\nvuu√\nN∑\ni=1\nv2\ni (5.8)\nThe dot product is higher if a vector is longer, with higher values in each dimension.\nMore frequent words have longer vectors, since they tend to co-occur with more\nwords and have higher co-occurrence values with each of them. The raw dot product\nthus will be higher for frequent words. But this is a problem; we’d like a similarity\nmetric that tells us how similar two words are regardless of their frequency.\nWe modify the dot product to normalize for the vector le",
+                "cross-encoder similarity (%)": 93.92
+            },
+            "retrieval_4": {
+                "text": "ve historically been a wide variety of other weightings.\nNow that we have some intuitions, let’s move on to examine the details of com-\nputing word similarity.\n5.4 Cosine for measuring similarity\nTo measure similarity between two target words v and w, we need a metric that\ntakes two vectors (of the same dimensionality, either both with words as dimensions,\nhence of length|V|, or both with documents as dimensions, of length|D|) and gives\na measure of their similarity. By far the most common similarity metric is thecosine\nof the angle between the vectors.\nThe cosine—like most measures for vector similarity used in NLP—is based on\nthe dot product operator from linear algebra, also called the inner product:dot product\ninner product\ndot product(v, w) = v· w =\nN∑\ni=1\nviwi = v1w1 + v2w2 + ... + v",
+                "cross-encoder similarity (%)": 92.56
+            },
+            "retrieval_5": {
+                "text": "f all other angles is less than 1.\nCosine similarity can be used to estimate word similarity, for tasks like ﬁnding\nword paraphrases, tracking changes in word meaning, or automatically discovering\nmeanings of words in different corpora. For example, we can ﬁne the 10 most similar\nwords to any target word w by computing the cosines between w and each of the\n|V|− 1 other words, sorting, and looking at the top 10.\n5.5 Word2vec\nIn the previous sections we saw how to represent a word as a sparse, long vector with\ndimensions corresponding to words in the vocabulary. We now introduce a more\npowerful word representation: embeddings, short dense vectors. Unlike the vectors\nwe’ve seen so far, embeddings areshort, with number of dimensionsd ranging from\n50-1000, rather than the much larger vocabulary",
+                "cross-encoder similarity (%)": 64.99
+            }
+        }
+    },
+    {
+        "question": "Why can a single linear classifier not represent XOR, while a multilayer network can?",
+        "gold_answer": "XOR classes cannot be separated by one line. A hidden layer with nonlinear activations transforms the inputs so an output layer can separate them.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "uts, the decision boundary becomes\na hyperplane instead of a line, but the idea is the same, separating the space into two\ncategories.\nFig. 6.5 shows the possible logical inputs (00, 01, 10, and 11) and the line drawn\nby one possible set of parameters for an AND and an OR classiﬁer. Notice that there\nis simply no way to draw a line that separates the positive cases of XOR (01 and 10)\nfrom the negative cases (00 and 11). We say that XOR is not a linearly separablelinearly\nseparable\nfunction. Of course we could draw a boundary with a curve, or some other function,\nbut not a single line.\n6.2.1 The solution: neural networks\nWhile the XOR function cannot be calculated by a single perceptron, it can be cal-\nculated by a layered network of perceptron units. Rather than see this with networks\nof s",
+                "cross-encoder similarity (%)": 85.51
+            },
+            "retrieval_2": {
+                "text": "m.vanishing\ngradient\nRectiﬁers don’t have this problem, since the derivative of ReLU for high values ofz\nis 1 rather than very close to 0.\n6.2 The XOR problem\nEarly in the history of neural networks it was realized that the power of neural net-\nworks, as with the real neurons that inspired them, comes from combining these\nunits into larger networks.\nOne of the most clever demonstrations of the need for multi-layer networks was\nthe proof by Minsky and Papert (1969) that a single neural unit cannot compute\nsome very simple functions of its input. Consider the task of computing elementary\nlogical functions of two inputs, like AND, OR, and XOR. As a reminder, here are\nthe truth tables for those functions:\nAND OR XOR\nx1 x2 y x1 x2 y x1 x2 y\n0 0 0 0 0 0 0 0 0\n0 1 0 0 1 1 0 1 1\n1 0 0 1 0 1 1 0 1",
+                "cross-encoder similarity (%)": 48.22
+            },
+            "retrieval_3": {
+                "text": "ut, however, that it’s not possible to build a perceptron to compute\nlogical XOR! (It’s worth spending a moment to give it a try!)\nThe intuition behind this important result relies on understanding that a percep-\ntron is a linear classiﬁer. For a two-dimensional input x1 and x2, the perceptron\nequation, w1x1 + w2x2 + b = 0 is the equation of a line. (We can see this by putting\nit in the standard linear format: x2 = (−w1/w2)x1 + (−b/w2).) This line acts as a\ndecision boundary in two-dimensional space in which the output 0 is assigned to alldecision\nboundary\ninputs lying on one side of the line, and the output 1 to all input points lying on the\nother side of the line. If we had more than 2 inputs, the decision boundary becomes\na hyperplane instead of a line, but the idea is the same, separat",
+                "cross-encoder similarity (%)": 9.39
+            },
+            "retrieval_4": {
+                "text": "an be cal-\nculated by a layered network of perceptron units. Rather than see this with networks\nof simple perceptrons, however, let’s see how to compute XOR using two layers of\nReLU-based units following Goodfellow et al. (2016). Fig. 6.6 shows a ﬁgure with\nthe input being processed by two layers of neural units. The middle layer (called\nh) has two units, and the output layer (called y) has one unit. A set of weights and\nbiases are shown that allows the network to correctly compute the XOR function.\nLet’s walk through what happens with the input x = [0, 0]. If we multiply each\ninput value by the appropriate weight, sum, and then add the biasb, we get the vector\n[0, -1], and we then apply the rectiﬁed linear transformation to give the output of the\nh layer as [0, 0]. Now we once again multi",
+                "cross-encoder similarity (%)": 1.91
+            },
+            "retrieval_5": {
+                "text": "6 CHAPTER 6 • N EURAL NETWORKS\n0\n0 1\n1\nx1\nx2\n0\n0 1\n1\nx1\nx2\n0\n0 1\n1\nx1\nx2\na)  x1 AND x2 b)  x1 OR x2 c)  x1 XOR x2\n?\nFigure 6.5 The functions AND, OR, and XOR, represented with input x1 on the x-axis and input x2 on the\ny-axis. Filled circles represent perceptron outputs of 1, and white circles perceptron outputs of 0. There is no\nway to draw a line that correctly separates the two categories for XOR. Figure styled after Russell and Norvig\n(2002).\nx1\nx2\nh1\nh2\ny1\n+1\n1\n-1\n1\n1\n1\n-2\n0\n1\n+1\n0\nFigure 6.6 XOR solution after Goodfellow et al. (2016). There are three ReLU units, in\ntwo layers; we’ve called them h1, h2 (h for “hidden layer”) and y1. As before, the numbers\non the arrows represent the weights w for each unit, and we represent the bias b as a weight\non a unit clamped to +1, with the bia",
+                "cross-encoder similarity (%)": 1.52
+            }
+        }
+    },
+    {
+        "question": "Why does causal attention mask future-token scores with negative infinity rather than zero?",
+        "gold_answer": "Softmax turns negative infinity into zero attention weight. A zero score generally receives nonzero weight, leaking future-token information during next-token training.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "ntionattentionattention\na1 a2 a3 a4 a5\nx3 x4 x5x1 x2\nFigure 10.1 (a) The causal transformer from Chapter 8, highlighting the attention computation at token 3. The\nattention value at each token is computed using only information seen earlier in the context. (b) Information\nﬂow in a bidirectional attention model. In processing each token, the model attends to all inputs, both before\nand after the current one. So attention for token 3 can draw on information from following tokens.\nThe implementation is very simple! We simply remove the attention masking\nstep that we introduced in Eq. ??. Recall from Chapter 8 that we had to mask the\nQK⊺ matrix for causal transformers so that attention couldn’t look at future tokens",
+                "cross-encoder similarity (%)": 87.66
+            },
+            "retrieval_2": {
+                "text": "8.3 • P ARALLELIZING COMPUTATION USING A SINGLE MATRIX X 13\nMasking out the future You may have noticed that we introduced a mask function\nin Eq. 8.34 above. This is because the self-attention computation as we’ve described\nit has a problem: the calculation of QK⊺ results in a score for each query value to\nevery key value, including those that follow the query . This is inappropriate in the\nsetting of language modeling: guessing the next word is pretty simple if you already\nknow it! To ﬁx this, the elements in the upper-triangular portion of the matrix are set\nto−∞, which the softmax will turn to zero, thus eliminating any knowledge of words\nthat follow in the sequence. This is done in practice by adding a mask matrix M in\nwhich Mi j =−∞∀ j > i (i.e. for the upper-triangular portion) andMi",
+                "cross-encoder similarity (%)": 85.99
+            },
+            "retrieval_3": {
+                "text": "see, alternatives like the masked language models of Chapter 9 are non-causal because\nthey can predict tokens based on both past and future tokens.",
+                "cross-encoder similarity (%)": 62.84
+            },
+            "retrieval_4": {
+                "text": "each\ninput token but generally aren’t used to produce running text by decoding/sampling.\nThat’s an important point: masked language models are not used for generation.\nThey are generally instead used for interpretative tasks.\n10.1.1 The architecture for bidirectional masked models\nLet’s ﬁrst discuss the overall architecture. Bidirectional transformer-based language\nmodels differ in two ways from the causal transformers in the previous chapters. The\nﬁrst is that the attention function isn’t causal; the attention for a token i can look at\nfollowing tokens i + 1 and so on. The second is that the training is slightly different\nsince we are predicting something in the middle of our text rather than at the end.\nWe’ll discuss the ﬁrst here and the second in the following section.\nFig. 10.1a, rep",
+                "cross-encoder similarity (%)": 14.07
+            },
+            "retrieval_5": {
+                "text": "redict tokens when\nit sees a [MASK], but we want the model to try to always predict the input token.\nTo train the model to make the prediction, the original input sequence is to-\nkenized using a subword model and tokens are sampled to be manipulated. Word\nembeddings for all of the tokens in the input are retrieved from theE embedding ma-\ntrix and combined with positional embeddings to form the input to the transformer,\npassed through the stack of bidirectional transformer blocks, and then the language\nmodeling head. The MLM training objective is to predict the original inputs for\neach of the masked tokens and the cross-entropy loss from these predictions drives\nthe training process for all the parameters in the model. That is, all of the input\ntokens play a role in the self-attention proce",
+                "cross-encoder similarity (%)": 0.04
+            }
+        }
+    },
+    {
+        "question": "In LoRA, which parameters are frozen and which are learned?",
+        "gold_answer": "The original weight matrix stays frozen. Two smaller trainable matrices supply a low-rank additive update, reducing the number of parameters optimized.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "ation. TheLoRA\nintuition of LoRA is that transformers have many dense layers which perform matrix\nmultiplication (for example the WQ, WK, WV, WO layers in the attention computa-\ntion). Instead of updating these layers during ﬁnetuning, with LoRA we freeze these\nlayers and instead update a low-rank approximation that has fewer parameters.\nConsider a matrix W of dimensionality [k× d] that needs to be updated during\nﬁnetuning via gradient descent. Normally this matrix would get updates ∆W of\ndimensionality [k× d], for updating the k× d parameters after gradient descent. In\nLoRA, we freeze W and update instead a low-rank decomposition of W. We create\ntwo matrices A and B, where A has size [k×r] and B has size [r×d], and we choose\nr to be quite small, r << min(d,k). During ﬁnetuning we update A",
+                "cross-encoder similarity (%)": 95.94
+            },
+            "retrieval_2": {
+                "text": "c-\ntion.\nHow does instruction tuning differ from the other kinds of ﬁnetuning introduced\nin Chapter 7 and Chapter 9? Fig. 9.1 sketches the differences. In the ﬁrst example,\nintroduced in Chapter 7 we can ﬁnetune as a way of adapting to a new domain by\njust continuing pretraining the LLM on data from a new domain. In this method\nall the parameters of the LLM are updated.\nIn the second example, also from Chapter 7,parameter-efﬁcient ﬁnetuning, we\nadapt to a new domain by creating some new (small) parameters, and just adapting\nthem to the new domain. In LoRA, for example, it’s the A and B matrices that we\nadapt, but the pretrained model parameters are frozen.\nIn the task-based ﬁnetuning of Chapter 9, we adapt to a particular task by adding\na new specialized classiﬁcation head and updating its",
+                "cross-encoder similarity (%)": 81.87
+            },
+            "retrieval_3": {
+                "text": "meters to train; each pass of batch gradient descent\nhas to backpropagate through many many huge layers. This makes ﬁnetuning huge\nlanguage models extremely expensive in processing power, in memory, and in time.\nFor this reason, there are alternative methods that allow a model to be ﬁnetuned\nwithout changing all the parameters. Such methods are called parameter-efﬁcient\nﬁne tuning or sometimes PEFT, because we efﬁciently select a subset of parameters\nparameter-\nefﬁcient ﬁne\ntuning\nPEFT to update when ﬁnetuning. For example we freeze some of the parameters (don’t\nchange them), and only update some particular subset of parameters.\nHere we describe one such model, calledLoRA, for Low-Rank Adaptation. TheLoRA\nintuition of LoRA is that transformers have many dense layers which perform matrix\nmu",
+                "cross-encoder similarity (%)": 39.09
+            },
+            "retrieval_4": {
+                "text": "them in or subtracting them from W.\nIn its original version LoRA was applied just to the matrices in the attention\ncomputation (the WQ, WK, WV, and WO layers). Many variants of LoRA exist.",
+                "cross-encoder similarity (%)": 0.84
+            },
+            "retrieval_5": {
+                "text": "and B has size [r×d], and we choose\nr to be quite small, r << min(d,k). During ﬁnetuning we update A and B instead\nof W. That is, we replace W + ∆W with W + AB. Fig. 8.19 shows the intuition.\nFor replacing the forward pass h = xW, the new forward pass is instead:\nh = xW + xAB (8.54)\nLoRA has a number of advantages. It dramatically reduces hardware requirements,\nsince gradients don’t have to be calculated for most parameters. The weight updates\ncan be simply added in to the pretrained weights, since AB is the same size as W).\nThat means it doesn’t add any time during inference. And it also means it’s possible\nto build LoRA modules for different domains and just swap them in and out by\nadding them in or subtracting them from W.\nIn its original version LoRA was applied just to the matrices in",
+                "cross-encoder similarity (%)": 0.63
+            }
+        }
+    },
+    {
+        "question": "In the original BERT masking procedure described here, how are selected tokens manipulated?",
+        "gold_answer": "Select 15% of input tokens. Of those selected, replace 80% with [MASK], replace 10% with random tokens, and leave 10% unchanged. Predict their original identities.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "is kind of training is called denoising: we corrupt (add noise to) the input indenoising\nsome way (by masking a word, or putting in an incorrect word) and the goal of the\nsystem is to remove the noise.\n10.2.1 Masking Words\nLet’s describe theMasked Language Modeling (MLM) approach to training bidi-\nMasked\nLanguage\nModeling\nrectional encoders (Devlin et al., 2019). As with the language model training meth-\nods we’ve already seen,MLM uses unannotated text from a large corpus. In MLM\ntraining, the model is presented with a series of sentences from the training corpus\nin which a percentage of tokens (15% in the BERT model) have been randomly cho-\nsen to be manipulated by the masking procedure. Given an input sentence lunch\nwas delicious and assume we randomly chose the 3rd token delicious to be",
+                "cross-encoder similarity (%)": 92.32
+            },
+            "retrieval_2": {
+                "text": "redict tokens when\nit sees a [MASK], but we want the model to try to always predict the input token.\nTo train the model to make the prediction, the original input sequence is to-\nkenized using a subword model and tokens are sampled to be manipulated. Word\nembeddings for all of the tokens in the input are retrieved from theE embedding ma-\ntrix and combined with positional embeddings to form the input to the transformer,\npassed through the stack of bidirectional transformer blocks, and then the language\nmodeling head. The MLM training objective is to predict the original inputs for\neach of the masked tokens and the cross-entropy loss from these predictions drives\nthe training process for all the parameters in the model. That is, all of the input\ntokens play a role in the self-attention proce",
+                "cross-encoder similarity (%)": 84.28
+            },
+            "retrieval_3": {
+                "text": "10.2 • T RAINING BIDIRECTIONAL ENCODERS 5\n• 10% of the time: The token is replaced with another token, randomly sampled\nfrom the vocabulary based on token unigram probabilities. e.g. lunch was\ndelicious → lunch was gasp .\n• 10% of the time: the token is left unchanged. e.g. lunch was delicious\n→ lunch was delicious .\nWe then train the model to guess the correct token for the manipulated tokens. Why\nthe three possible manipulations? Adding the [MASK] token creates a mismatch\nbetween pretraining and downstream ﬁnetuning or inference, since when we employ\nthe MLM model to perform a downstream task, we don’t use any[MASK] tokens. If\nwe just replaced tokens with the [MASK], the model might only predict tokens when\nit sees a [MASK], but we want the model to try to always predict the input token.",
+                "cross-encoder similarity (%)": 24.9
+            },
+            "retrieval_4": {
+                "text": "he parameters in the model. That is, all of the input\ntokens play a role in the self-attention process, but only the sampled tokens are used\nfor learning.\nLM Head with Softmax \nover Vocabulary\nSo [mask] and [mask] for \nlong thanks\nCE Loss\nall apricot ﬁsh\nthe\nToken +\nPositional \nEmbeddings\nSo long and thanks for all ﬁshthe\nBidirectional Transformer Encoder\n+\np1\n+ + + + + + +\np2 p3 p4 p5 p6 p7 p8\nhL\n1 hL\n2 hL\n3 hL\n4 hL\n5 hL\n6 hL\n7 hL\n8\nFigure 10.3 Masked language model training. In this example, three of the input tokens are selected, two of\nwhich are masked and the third is replaced with an unrelated word. The probabilities assigned by the model to\nthese three items are used as the training loss. The other 5 tokens don’t play a role in training loss.\nFig. 10.3 illustrates this approach with",
+                "cross-encoder similarity (%)": 12.87
+            },
+            "retrieval_5": {
+                "text": "oss. The other 5 tokens don’t play a role in training loss.\nFig. 10.3 illustrates this approach with a simple example. Here,long, thanks and\nthe have been sampled from the training sequence, with the ﬁrst two masked andthe\nreplaced with the randomly sampled token apricot. The resulting embeddings are\npassed through a stack of bidirectional transformer blocks. Recall from Section ??\nin Chapter 8 that to produce a probability distribution over the vocabulary for each\nof the masked tokens, the language modeling head takes the output vector hL\ni from\nthe ﬁnal transformer layer L for each masked token i, multiplies it by the unembed-\nding layer ET to produce the logits u, and then uses softmax to turn the logits into",
+                "cross-encoder similarity (%)": 10.14
+            }
+        }
+    },
+    {
+        "question": "Does a successful linguistic probe prove that a language model uses the probed information?",
+        "gold_answer": "No. Probe success shows that a classifier can extract the property from the representation. This does not establish a causal role in the language model’s behavior.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "t when asked questions about the\nlegal domain (like about particular legal cases), large language models hallucinated\nfrom 69% to 88% of the time! LLMs sometimes give incorrect factual responses\neven when the correct facts are stored in the parameters; this seems to be caused\nby the feedforward layers failing to recall the knowledge stored in their parameters\n(Jiang et al., 2024).\nAnd it’s not always possible to tell when language models are hallucinating,\npartly because LLMs aren’t well-calibrated. In a calibrated system, the conﬁdencecalibrated\nof a system in the correctness of its answer is highly correlated with the probability\nof an answer being correct. So if a calibrated system is wrong, at least it might hedge\nits answer or tell us to go check another source. But since language mod",
+                "cross-encoder similarity (%)": 3.04
+            },
+            "retrieval_2": {
+                "text": "ssages (Sachan et al., 2023).\nEarly work on large language models showed that they stored sufﬁcient knowl-\nedge in the pretraining process to answer questions (Petroni et al., 2019; Raffel\net al., 2020; Radford et al., 2019; Roberts et al., 2020), at ﬁrst not competitively\nwith special-purpose question answerers, but quickly surpassing them. Retrieval-\naugmented generation algorithms were ﬁrst introduced as a way to improve lan-\nguage modeling word prediction (Khandelwal et al., 2019), but were quickly applied\nto question answering (Izacard et al., 2022; Ram et al., 2023; Shi et al., 2023).\nExercises",
+                "cross-encoder similarity (%)": 1.67
+            },
+            "retrieval_3": {
+                "text": "7.6 • E VALUATING LARGE LANGUAGE MODELS 19\nFine-\ntuning \nData\nPretraining Data\nPretraining\n…\n …\n …\nFine-tuning\n…\n …\n …\nPretrained LM Fine-tuned LM\nFigure 7.15 Pretraining and ﬁnetuning. A pre-trained model can be ﬁnetuned to a particular\ndomain or dataset. There are many different ways to ﬁnetune, depending on exactly which\nparameters are updated from the ﬁnetuning data: all the parameters, some of the parameters,\nor only the parameters of speciﬁc extra circuitry, as we’ll see in future chapters.\n7.6 Evaluating Large Language Models\nWe can evaluate language models by accuracy (how well they predict unseen text,\nby how well they perform tasks like answering questions or translating text), or by\nother factors like how fast they can be run, how much energy they use, or how fair\nthey are. We’l",
+                "cross-encoder similarity (%)": 1.0
+            },
+            "retrieval_4": {
+                "text": "ost probable word) and ran-\ndom sampling (generate a random word according to its probability).\n• Temperature sampling increases the probabilities of the high-probability words,\ndecreases the probability of the low-probability words, and then samples from\nthis new distribution.\n• Large language models are pretrained to predict words on datasets of 100s of\nbillions of words generally scraped from the web.\n• These datasets need to be ﬁltered for quality.\n• The pretraining algorithm relies on cross-entropy loss: minimizing the nega-\ntive log probability of the true next word.\n• Language models are evaluated by perplexity, by evaluations of accuracy on\nproxies for downstream tasks, like the MMLU question-answering dataset,\nand via metrics for other factors like fairness and energy use.\n• Langu",
+                "cross-encoder similarity (%)": 0.89
+            },
+            "retrieval_5": {
+                "text": "22 CHAPTER 7 • L ARGE LANGUAGE MODELS\nsizes. Big models also use more energy, and we prefer models that use less energy,\nboth to reduce the environmental impact of the model and to reduce the ﬁnancial\ncost of building or deploying it. We can target our evaluation to these factors by\nmeasuring performance normalized to a given compute or memory budget. We can\nalso directly measure the energy usage of our model in kWh or in kilograms of CO2\nemitted (Strubell et al., 2019; Henderson et al., 2020; Liang et al., 2023).\nAnother feature that a language model evaluation can measure is fairness. We\nknow that language models are biased, exhibiting gendered and racial stereotypes,\nor decreased performance for language from or about certain demographics groups.\nThere are language model evaluation benc",
+                "cross-encoder similarity (%)": 0.82
+            }
+        }
+    },
+    {
+        "question": "What do the BM25 parameters k and b control, and what happens when each is zero?",
+        "gold_answer": "k controls the term-frequency contribution; at k=0, occurrence is effectively binary with IDF weighting. b controls document-length normalization; b=0 removes that normalization.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "11.1 • I NFORMATION RETRIEVAL 9\na query q is:\n∑\nt∈q\nIDF\nz }| {\nlog\n( N\ndft\n)\nweighted tf\nz }| {\ntft,d\nk\n(\n1− b + b\n(\n|d|\n|davg|\n))\n+ tft,d\n(11.12)\nwhere|davg| is the length of the average document. When k is 0, BM25 reverts to\nno use of term frequency, just a binary selection of terms in the query (plus idf).\nA large k results in raw term frequency (plus idf). b ranges from 1 (scaling by\ndocument length) to 0 (no length scaling). Manning et al. (2008) suggest reasonable\nvalues are k = [1.2,2] and b = 0.75. Kamphuis et al. (2020) is a useful summary of\nthe many minor variants of BM25.\nStop words In the past it was common to remove high-frequency words from both\nthe query and document before representing them. The list of such high-frequency\nwords to be removed is called a stop list. The int",
+                "cross-encoder similarity (%)": 83.96
+            },
+            "retrieval_2": {
+                "text": "for the\ndocument. Eliminating the second copy of the idf term (since the identical term is\nalready computed for the query) turns out to sometimes result in better performance:\nscore(q,d) =\n∑\nt∈q\ntft,q·idft√∑\nqi∈q tf-idf 2(qi,q)\n· tft,d· idft√∑\ndi∈d tf-idf 2(di,d)\n(11.11)\nOther variants of tf-idf eliminate various other terms.\nA slightly more complex variant in the tf-idf family is the BM25 weightingBM25\nscheme (sometimes called Okapi BM25 after the Okapi IR system in which it was\nintroduced (Robertson et al., 1995)). BM25 adds two parameters: k, a knob that\nadjusts the balance between term frequency and IDF, and b, which controls the im-\nportance of document length normalization. The BM25 score of a documentd given",
+                "cross-encoder similarity (%)": 71.74
+            }
+        }
+    },
+    {
+        "question": "How does backtranslation turn monolingual target-language text into training data for source-to-target translation?",
+        "gold_answer": "Train a reverse target-to-source model on available parallel data. Translate monolingual target sentences into synthetic source sentences, then pair each synthetic source with its original target for forward-model training.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "n backtranslation, our goal is to improve source-to-target MT, given a small\nparallel text (a bitext) in the source/target languages, and some monolingual data\nin the target language. We ﬁrst use the bitext to train a MT system in the reverse\ndirection: a target-to-source MT system. We then use it to translate the monolingual\ntarget data to the source language. Now we can add this synthetic bitext (natural\ntarget sentences, aligned with MT-produced source sentences) to our training data,\nand retrain our source-to-target MT model. For example suppose we want to trans-\nlate from Navajo to English but only have a small Navajo-English bitext, although of\ncourse we can ﬁnd lots of monolingual English data. We use the small bitext to build\nan MT engine going the other way (from English to Navajo",
+                "cross-encoder similarity (%)": 99.85
+            },
+            "retrieval_2": {
+                "text": "12.5 • T RANSLATING IN LOW -RESOURCE SITUATIONS 17\n12.5.1 Data Augmentation\nData augmentation is a statistical technique for dealing with insufﬁcient training\ndata, by adding new synthetic data that is generated from the current natural data.\nThe most common data augmentation technique for machine translation is called\nbacktranslation. Backtranslation relies on the intuition that while parallel corporabacktranslation\nmay be limited for particular languages or domains, we can often ﬁnd a large (or\nat least larger) monolingual corpus, to add to the smaller parallel corpora that are\navailable. The algorithm makes use of monolingual corpora in the target language\nby creating synthetic bitexts.\nIn backtranslation, our goal is to improve source-to-target MT, given a small\nparallel text (a bitext",
+                "cross-encoder similarity (%)": 99.72
+            },
+            "retrieval_3": {
+                "text": "lish data. We use the small bitext to build\nan MT engine going the other way (from English to Navajo). Once we translate the\nmonolingual English text to Navajo, we can add this synthetic Navajo/English bitext\nto our training data.\nBacktranslation has various parameters. One is how we generate the backtrans-\nlated data; we can run the decoder in greedy inference, or use beam search. Or\nwe can do sampling, like the temperature sampling algorithm we saw in Chapter 8.\nAnother parameter is the ratio of backtranslated data to natural bitext data; we can\nchoose to upsample the bitext data (include multiple copies of each sentence). In\ngeneral backtranslation works surprisingly well; one estimate suggests that a system\ntrained on backtranslated text gets about 2/3 of the gain as would training on",
+                "cross-encoder similarity (%)": 98.53
+            },
+            "retrieval_4": {
+                "text": "heir objects.\n• Encoder-decoder networks are composed of an encoder network that takes\nan input sequence and creates a contextualized representation of it, the con-\ntext. This context representation is then passed to a decoder which generates\na task-speciﬁc output sequence.\n• Cross-attention allows the transformer decoder to view information from all\nthe hidden states of the encoder.\n• Machine translation models are trained on aparallel corpus, sometimes called\na bitext, a text that appears in two (or more) languages.\n• Backtranslation is a way of making use of monolingual corpora in the target\nlanguage by running a pilot MT engine backwards to create synthetic bitexts.",
+                "cross-encoder similarity (%)": 92.87
+            },
+            "retrieval_5": {
+                "text": "roaches for dealing with this\ndata sparsity: backtranslation, which is a special case of the general statistical\ntechnique called data augmentation, and multilingual models, and also discuss\nsome socio-technical issues.",
+                "cross-encoder similarity (%)": 1.84
+            }
+        }
+    },
+    {
+        "question": "What do an LSTM’s forget, input/add, and output gates control?",
+        "gold_answer": "The forget gate controls retained cell information. The input/add gate controls new information written into the cell. The output gate controls what the updated cell exposes as the hidden state.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "orma-output gate\ntion is required for the current hidden state (as opposed to what information needs\nto be preserved for future decisions).\not = σ (Uoht−1 + Woxt ) (13.26)\nht = ot⊙ tanh(ct ) (13.27)\nFig. 13.13 illustrates the complete computation for a single LSTM unit. Given the\nappropriate weights for the various gates, an LSTM accepts as input the context\nlayer, and hidden layer from the previous time step, along with the current input\nvector. It then generates updated context and hidden vectors as output.\nIt is the hidden state, ht, that provides the output for the LSTM at each time step.\nThis output can be used as the input to subsequent layers in a stacked RNN, or at the\nﬁnal layer of a network ht can be used to provide the ﬁnal output of the LSTM.",
+                "cross-encoder similarity (%)": 84.96
+            },
+            "retrieval_2": {
+                "text": "13.5 • T HE LSTM 15\ncomprise the network layers. These gates are implemented through the use of addi-\ntional weights that operate sequentially on the input, and previous hidden layer, and\nprevious context layers.\nThe gates in an LSTM share a common design pattern; each consists of a feed-\nforward layer, followed by a sigmoid activation function, followed by a pointwise\nmultiplication with the layer being gated. The choice of the sigmoid as the activation\nfunction arises from its tendency to push its outputs to either 0 or 1. Combining this\nwith a pointwise multiplication has an effect similar to that of a binary mask. Values\nin the layer being gated that align with values near 1 in the mask are passed through\nnearly unchanged; values corresponding to lower values are essentially erased.\nTh",
+                "cross-encoder similarity (%)": 52.34
+            },
+            "retrieval_3": {
+                "text": "are passed through\nnearly unchanged; values corresponding to lower values are essentially erased.\nThe ﬁrst gate we’ll consider is the forget gate. The purpose of this gate isforget gate\nto delete information from the context that is no longer needed. The forget gate\ncomputes a weighted sum of the previous state’s hidden layer and the current in-\nput and passes that through a sigmoid. This mask is then multiplied element-wise\nby the context vector to remove the information from context that is no longer re-\nquired. Element-wise multiplication of two vectors (represented by the operator ⊙,\nand sometimes called the Hadamard product) is the vector of the same dimension\nas the two input vectors, where each element i is the product of element i in the two\ninput vectors:\nft = σ (U f ht−1 + W f xt",
+                "cross-encoder similarity (%)": 31.64
+            },
+            "retrieval_4": {
+                "text": "d output.\nThe increased complexity of the LSTM units is encapsulated within the unit\nitself. The only additional external complexity for the LSTM over the basic recurrent\nunit (b) is the presence of the additional context vector as an input and output.\nThis modularity is key to the power and widespread applicability of LSTM units.\nLSTM units (or other varieties, like GRUs) can be substituted into any of the network\narchitectures described in Section 13.4. And, as with simple RNNs, multi-layered",
+                "cross-encoder similarity (%)": 23.15
+            },
+            "retrieval_5": {
+                "text": "where each element i is the product of element i in the two\ninput vectors:\nft = σ (U f ht−1 + W f xt ) (13.20)\nkt = ct−1⊙ ft (13.21)\nThe next task is to compute the actual information we need to extract from the previ-\nous hidden state and current inputs—the same basic computation we’ve been using\nfor all our recurrent networks.\ngt = tanh(Ught−1 + Wgxt ) (13.22)\nNext, we generate the mask for the add gate to select the information to add to theadd gate\ncurrent context.\nit = σ (Uiht−1 + Wixt ) (13.23)\njt = gt⊙ it (13.24)\nNext, we add this to the modiﬁed context vector to get our new context vector.\nct = jt + kt (13.25)\nThe ﬁnal gate we’ll use is theoutput gate which is used to decide what informa-output gate\ntion is required for the current hidden state (as opposed to what information needs",
+                "cross-encoder similarity (%)": 0.06
+            }
+        }
+    },
+    {
+        "question": "How do pitch and loudness differ from fundamental frequency and intensity?",
+        "gold_answer": "Fundamental frequency and intensity are physical signal properties. Pitch and loudness are their perceptual counterparts; perception is not simply a globally linear copy of the physical measurements.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "How does CTC collapse the alignment [a, a, blank, a, b, b, blank]?",
+        "gold_answer": "First merge adjacent repeats, then remove blanks. The result is aab: the blank separates the two retained a symbols.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "18 CHAPTER 15 • A UTOMATIC SPEECH RECOGNITION\nX (input)\nA (alignment)\nY (output)\nd\nx1\ni\nx2\ni\nx3\nn\nx4\nn\nx5\nn\nx6\nn\nx7\ne\nx8\nr\nx9\nr\nx10\nr\nx11\nr\nx12\nr\nx13\nr\nx14\nd i n e r\nwavefile\nFigure 15.12 A naive algorithm for collapsing an alignment between input and letters.\nX (input)\nA (alignment)\nremove blanks\nd\nx1\ni\nx2x3\nn\nx4\nn\nx5x6\nn\nx7\ne\nx8\nr\nx9\nr\nx10\nr\nx11\nr\nx12x13x14\ndi n e rn\nmerge duplicatesdi n e rn\nY (output)din ern\n␣\n␣\n␣\n␣\n␣\n␣␣\nFigure 15.13 The CTC collapsing function B, showing the space blank character ; re-\npeated (consecutive) characters in an alignment A are removed to form the output Y .\nThe CTC collapsing function is many-to-one; lots of different alignments map\nto the same output string. For example, the alignment shown in Fig. 15.13 is not\nthe only alignment that results in the strin",
+                "cross-encoder similarity (%)": 97.04
+            },
+            "retrieval_2": {
+                "text": "apse across . More formally, let’s deﬁne the mappingB : a→ y\nbetween an alignment a and an output y, which collapses all repeated letters and\nthen removes all blanks. Fig. 15.13 sketches this collapsing function B.",
+                "cross-encoder similarity (%)": 96.48
+            },
+            "retrieval_3": {
+                "text": "uition of CTC is to output a single character for every frame of the input, so that\nthe output is the same length as the input, and then to apply a collapsing function\nthat combines sequences of identical letters, resulting in a shorter sequence.\nLet’s imagine inference on someone saying the word dinner, and let’s suppose\nwe had a function that chooses the most probable letter for each input spectral frame\nrepresentation xi. We’ll call the sequence of letters corresponding to each input\nframe an alignment, because it tells us where in the acoustic signal each letter alignsalignment\nto. Fig. 15.12 shows one such alignment, and what happens if we use a collapsing\nfunction that just removes consecutive duplicate letters.\nWell, that doesn’t work; our naive algorithm has transcribed the speech",
+                "cross-encoder similarity (%)": 85.47
+            },
+            "retrieval_4": {
+                "text": ". For example, the alignment shown in Fig. 15.13 is not\nthe only alignment that results in the string dinner. Fig. 15.14 shows some other\nalignments that would produce the same output.\ndi n nneeerrr␣ ␣\nddinn nerr␣ ␣␣\ndddin nn err␣\ni\n␣␣\n␣␣␣\nFigure 15.14 Three other legitimate alignments producing the transcript dinner.\nIt’s useful to think of the set of all alignments that might produce the same output\nY . We’ll use the inverse of our B function, called B−1, and represent that set as\nB−1(Y ).\n15.5.1 CTC Inference\nBefore we see how to compute PCTC(Y|X) let’s ﬁrst see how CTC assigns a proba-\nbility to one particular alignment ˆA ={ ˆa1,..., ˆan}. CTC makes a strong conditional\nindependence assumption: it assumes that, given the inputX, the CTC model output\nat at time t is independent of the",
+                "cross-encoder similarity (%)": 15.08
+            },
+            "retrieval_5": {
+                "text": "nments). However, we can efﬁciently compute the sum by using dynamic pro-\ngramming to merge alignments, with a version of the forward-backward algo-\nrithm also used to train HMMs (Appendix A) and CRFs. The original dynamic pro-\ngramming algorithms for both training and inference are laid out in (Graves et al.,\n2006); see (Hannun, 2017) for a detailed explanation of both.\n15.5.3 Combining CTC and Encoder-Decoder\nIt’s also possible to combine the two architectures/loss functions we’ve described,\nthe cross-entropy loss from the encoder-decoder architecture, and the CTC loss.\nFig. 15.16 shows a sketch. For training, we can simply weight the two losses with a\nλ tuned on a devset:\nL =−λ log Pencdec(Y|X)− (1− λ )log Pctc (Y|X) (15.22)\nFor inference, we can combine the two with the language model",
+                "cross-encoder similarity (%)": 1.91
+            }
+        }
+    },
+    {
+        "question": "What are the two code-generation stages in VALL-E?",
+        "gold_answer": "An autoregressive model generates the first quantizer’s code sequence. A non-autoregressive model then predicts the remaining codebook sequences, conditioned on the earlier codes.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "10 CHAPTER 16 • T EXT-TO-SPEECH\nthe language model generates the acoustic codes in two stages. First, an autoregres-\nsive LM generates the ﬁrst-quantizer codes for the entire output sequence, given the\ninput text and enrolled audio. Then given those codes, a non-autoregressive LM is\nrun 7 times, each time taking as input the output of the initial autoregressive codes\nand the prior non-autoregressive quantizer and thus generating the codes from the\nremaining quantizers one by one. Fig. 16.7 shows the intuition for the inference\nstep.\nNow let’s see the architecture in a bit more detail. For training, we are given\nan audio sample y and its tokenized text transcription x = [x0, x1, . . . ,xL]. We use a\npretrained E NCODEC to convert y into a code matrix C. Let T be the number of\ndownsampled ve",
+                "cross-encoder similarity (%)": 23.74
+            },
+            "retrieval_2": {
+                "text": "ge model to conditionally generate discrete audio tokens corresponding\nto the text prompt, in the voice of the speech sample.\nAutoregressive (AR) Transformer\nTextAudio Prompt\nCT’+1,1 CT’+2,1 CT,1\nCT’+1,2\nCT’+1,3\nCT’+2,2 CT,2\nCT’+2,3\nx C\nCT,3\nCT’+1,1 CT’+2,1 CT,1\nx C\nx C\nx C\nCT’+1,1\nCT’+1,2 …\n…\n…\nCT,1CT’+2,1\nCT’+2,2 CT,2\n…\nNon-Autoregressive\nNon-Autoregressive\nNon-Autoregressive\nOutput code sequence\n…\nFigure 16.7 The 2-stage language modelling approach for V ALL-E, showing the inference\nstage for the autoregressive transformer and the ﬁrst 3 of the 7 non-autoregressive transform-\ners. The output sequence of discrete audio codes is generated in two stages. First the au-\ntoregressive LM generates all the codes for the ﬁrst quantizer from left to right. Then the\nnon-autoregressive model is cal",
+                "cross-encoder similarity (%)": 0.15
+            },
+            "retrieval_3": {
+                "text": "−log p(C|x)\n= −log\nT∏\nt=0\np(c<t,:,x) (16.6)\nCHEN et al.: NEURAL CODEC LANGUAGE MODELS ARE ZERO-SHOT TEXT TO SPEECH SYNTHESIZERS 709\nFig. 3. Training overview of V ALL-E. We regard TTS as a conditional codec language modeling task. We structure V ALL-E as two conditional codec languag e\nmodels in a hierarchical structure. The AR model is used to generate each code of the ﬁrst code sequence in an autoregressive manner, while the NAR model is\nused to generate each remaining code sequence based on the previous code sequences in a non-autoregressive manner.\nB. Hierarchical Structure: AR and NAR Model\nAs introduced in Section III,t h ec o d e cc o d e sd e r i v e df r o mt h e\nneural audio codec model with RVQ exhibit two key properties:\n(1) A single speech sample is encoded into multiple code",
+                "cross-encoder similarity (%)": 0.08
+            },
+            "retrieval_4": {
+                "text": "AR model\ngenerates sequence of the ﬁrst code for each frame in an\nautoregressive manner, while the NAR model generates each\nremaining code sequence based on the previous code sequences\nin a non-autoregressive manner. Both models utilize the same\nTransformer architecture with a text embedding layer, a code\nembedding layer, and a code prediction layer. We use distinct\nembeddings for the code from different codec quantizers and\nshare the parameters of the code prediction layer with the\nparameters of the code embedding layer. Compared to the AR\nmodel, the NAR model also have a code ID embedding layer to\nspecify the ID of the code sequence to predict. The AR model\nand NAR model have different attention mask strategies: the AR\nmodel uses the causal attention strategy and the NAR model uses\nthe f",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "rix Wx and the code embedding matrix Wc,\nrespectively.\nex\ni = Wx ⊙ xi, (7)\nec\nt = Wc ⊙ ct,1, (8)\nwhere ⊙ denotes index selection. We concatenate the text em-\nbedding sequence and the code embedding sequence, inserting\nthe embedding of special tokens < eos > and < bos > in be-\ntween:\nE = Ex ∥ [e<eos>, e<bos>] ∥ Ec, (9)\nwhere || indicates concatenation. We then separately add the\nlearnable position embedding to the text embedding sequence\nAuthorized licensed use limited to: Stanford University Libraries. Downloaded on August 18,2025 at 16:03:17 UTC from IEEE Xplore.  Restrictions apply. \nFigure 16.8 Training procedure for V ALL-E. Given the text prompt, the autoregressive\ntransformer is ﬁrst trained to generate each code of the ﬁrst-quantizer code sequence, autore-\ngressively The the non-aut",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "What two independence assumptions does a bigram HMM part-of-speech tagger make?",
+        "gold_answer": "A word’s emission depends only on its own tag. A tag’s transition probability depends only on the previous tag, rather than the entire tag history.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "n|t1 . . .tn) ≈\nn∏\ni=1\nP(wi|ti) (17.15)\nThe second assumption (the Markov assumption, Eq. 17.6) is that the probability of\na tag is dependent only on the previous tag, rather than the entire tag sequence;\nP(t1 . . .tn) ≈\nn∏\ni=1\nP(ti|ti−1) (17.16)\nPlugging the simplifying assumptions from Eq. 17.15 and Eq. 17.16 into Eq. 17.14\nresults in the following equation for the most probable tag sequence from a bigram\ntagger:\nˆt1:n = argmax\nt1... tn\nP(t1 . . .tn|w1 . . .wn)≈ argmax\nt1... tn\nn∏\ni=1\nemissionz }| {\nP(wi|ti)\ntransitionz }| {\nP(ti|ti−1) (17.17)\nThe two parts of Eq. 17.17 correspond neatly to the B emission probability and A\ntransition probability that we just deﬁned above!",
+                "cross-encoder similarity (%)": 72.47
+            },
+            "retrieval_2": {
+                "text": "10 CHAPTER 17 • S EQUENCE LABELING FOR PARTS OF SPEECH AND NAMED ENTITIES\n17.4.3 The components of an HMM tagger\nAn HMM has two components, theA and B probabilities, both estimated by counting\non a tagged training corpus. (For this example we’ll use the tagged WSJ corpus.)\nThe A matrix contains the tag transition probabilities P(ti|ti−1) which represent\nthe probability of a tag occurring given the previous tag. For example, modal verbs\nlike will are very likely to be followed by a verb in the base form, a VB, likerace, so\nwe expect this probability to be high. We compute the maximum likelihood estimate\nof this transition probability by counting, out of the times we see the ﬁrst tag in a\nlabeled corpus, how often the ﬁrst tag is followed by the second:\nP(ti|ti−1) = C(ti−1,ti)\nC(ti−1) (17.8)",
+                "cross-encoder similarity (%)": 45.47
+            },
+            "retrieval_3": {
+                "text": "8 CHAPTER 17 • S EQUENCE LABELING FOR PARTS OF SPEECH AND NAMED ENTITIES\n17.4 HMM Part-of-Speech Tagging\nIn this section we introduce our ﬁrst sequence labeling algorithm, the Hidden Markov\nModel, and show how to apply it to part-of-speech tagging. Recall that a sequence\nlabeler is a model whose job is to assign a label to each unit in a sequence, thus\nmapping a sequence of observations to a sequence of labels of the same length.\nThe HMM is a classic model that introduces many of the key concepts of sequence\nmodeling that we will see again in more modern models.\nAn HMM is a probabilistic sequence model: given a sequence of units (words,\nletters, morphemes, sentences, whatever), it computes a probability distribution over\npossible sequences of labels and chooses the best label sequence.\n17.",
+                "cross-encoder similarity (%)": 30.29
+            },
+            "retrieval_4": {
+                "text": "i. Some states j may have π j = 0,\nmeaning that they cannot be initial states. Also,∑n\ni=1 πi = 1\nThe HMM is given as inputO = o1o2 . . .oT : a sequence of T observations, each\none drawn from the vocabulary V .\nA ﬁrst-order hidden Markov model instantiates two simplifying assumptions.\nFirst, as with a ﬁrst-order Markov chain, the probability of a particular state depends\nonly on the previous state:\nMarkov Assumption: P(qi|q1, ...,qi−1) = P(qi|qi−1) (17.6)\nSecond, the probability of an output observationoi depends only on the state that\nproduced the observation qi and not on any other states or any other observations:\nOutput Independence: P(oi|q1, . . .qi, . . . ,qT ,o1, . . . ,oi, . . . ,oT ) = P(oi|qi) (17.7)",
+                "cross-encoder similarity (%)": 6.19
+            },
+            "retrieval_5": {
+                "text": "se the tag\nsequence t1 . . .tn that is most probable given the observation sequence of n words\nw1 . . .wn:\nˆt1:n = argmax\nt1... tn\nP(t1 . . .tn|w1 . . .wn) (17.12)\nThe way we’ll do this in the HMM is to use Bayes’ rule to instead compute:\nˆt1:n = argmax\nt1... tn\nP(w1 . . .wn|t1 . . .tn)P(t1 . . .tn)\nP(w1 . . .wn) (17.13)\nFurthermore, we simplify Eq. 17.13 by dropping the denominator P(wn\n1):\nˆt1:n = argmax\nt1... tn\nP(w1 . . .wn|t1 . . .tn)P(t1 . . .tn) (17.14)\nHMM taggers make two further simplifying assumptions. The ﬁrst (output in-\ndependence, from Eq. 17.7) is that the probability of a word appearing depends only\non its own tag and is independent of neighboring words and tags:\nP(w1 . . .wn|t1 . . .tn) ≈\nn∏\ni=1\nP(wi|ti) (17.15)\nThe second assumption (the Markov assumption, Eq. 17.6) is t",
+                "cross-encoder similarity (%)": 0.24
+            }
+        }
+    },
+    {
+        "question": "Which grammar rule forms does standard CKY require, and what does a chart cell represent?",
+        "gold_answer": "In Chomsky Normal Form, rules expand to two nonterminals or one terminal. A chart cell stores nonterminals that can derive its input span.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "What makes a dependency arc projective, and how can non-projectivity appear in a drawing?",
+        "gold_answer": "For a projective arc, the head has a dependency path to every intervening word. Non-projective trees require crossing arcs in the usual word-order drawing.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "How does distant supervision provide relation-extraction labels, and why can those labels be noisy?",
+        "gold_answer": "Match known knowledge-base entity pairs to sentences mentioning them and use the known relation as supervision. A matching sentence may discuss a different relationship, so co-occurrence does not ensure that relation is expressed.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "20.2 • R ELATION EXTRACTION ALGORITHMS 9\n20.2.4 Distant Supervision for Relation Extraction\nAlthough hand-labeling text with relation labels is expensive to produce, there are\nways to ﬁnd indirect sources of training data. The distant supervision methoddistant\nsupervision\n(Mintz et al., 2009) combines the advantages of bootstrapping with supervised learn-\ning. Instead of just a handful of seeds, distant supervision uses a large database to\nacquire a huge number of seed examples, creates lots of noisy pattern features from\nall these examples and then combines them in a supervised classiﬁer.\nFor example suppose we are trying to learn the place-of-birth relationship be-\ntween people and their birth cities. In the seed-based approach, we might have only\n5 examples to start with. But Wikipedia-",
+                "cross-encoder similarity (%)": 99.75
+            },
+            "retrieval_2": {
+                "text": "ive to genre issues in the training corpus, and relies on very\nlarge amounts of unlabeled data. Distant supervision also has the advantage that it\ncan create training tuples to be used with neural classiﬁers, where features are not\nrequired.\nThe main problem with distant supervision is that it tends to produce low-precision\nresults, and so current research focuses on ways to improve precision. Furthermore,\ndistant supervision can only help in extracting relations for which a large enough\ndatabase already exists. To extract new relations without datasets, or relations for\nnew domains, purely unsupervised methods must be used.\n20.2.5 Unsupervised Relation Extraction\nThe goal of unsupervised relation extraction is to extract relations from the web\nwhen we have no labeled training data, and no",
+                "cross-encoder similarity (%)": 97.21
+            },
+            "retrieval_3": {
+                "text": "sed classiﬁer on observations\nreturn C\nFigure 20.8 The distant supervision algorithm for relation extraction. A neural classiﬁer\nwould skip the feature set f .\nDistant supervision shares advantages with each of the methods we’ve exam-\nined. Like supervised classiﬁcation, distant supervision uses a classiﬁer with lots\nof features, and supervised by detailed hand-created knowledge. Like pattern-based\nclassiﬁers, it can make use of high-precision evidence for the relation between en-\ntities. Indeed, distance supervision systems learn patterns just like the hand-built\npatterns of early relation extractors. For example the is-a or hypernym extraction\nsystem of Snow et al. (2005) used hypernym/hyponym NP pairs from WordNet as\ndistant supervision, and then learned new patterns from large amounts",
+                "cross-encoder similarity (%)": 94.93
+            },
+            "retrieval_4": {
+                "text": "lation extraction is to extract relations from the web\nwhen we have no labeled training data, and not even any list of relations. This task\nis often called open information extraction or Open IE. In Open IE, the relations\nopen\ninformation\nextraction",
+                "cross-encoder similarity (%)": 0.27
+            }
+        }
+    },
+    {
+        "question": "How do PropBank and FrameNet organize semantic roles differently?",
+        "gold_answer": "PropBank assigns numbered roles relative to individual predicate senses. FrameNet defines frame-specific roles shared across lexical items evoking a common situation.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "elative to other participants, etc.), the greater the likelihood that the argument can\nbe labeled a PROTO -PATIENT .\nThe second direction is instead to deﬁne semantic roles that are speciﬁc to a\nparticular verb or a particular group of semantically related verbs or nouns.\nIn the next two sections we describe two commonly used lexical resources that\nmake use of these alternative versions of semantic roles.PropBank uses both proto-\nroles and verb-speciﬁc semantic roles. FrameNet uses semantic roles that are spe-\nciﬁc to a general semantic idea called a frame.",
+                "cross-encoder similarity (%)": 99.51
+            },
+            "retrieval_2": {
+                "text": "the object of the verb increased or as a nominal modiﬁer\nof the noun rise.\nThe FrameNet project is another semantic-role-labeling project that attemptsFrameNet\nto address just these kinds of problems (Baker et al. 1998, Fillmore et al. 2003,\nFillmore and Baker 2009, Ruppenhofer et al. 2016). Whereas roles in the PropBank\nproject are speciﬁc to an individual verb, roles in the FrameNet project are speciﬁc\nto a frame.\nWhat is a frame? Consider the following set of words:\nreservation, ﬂight, travel, buy, price, cost, fare, rates, meal, plane\nThere are many individual lexical relations of hyponymy, synonymy, and so on\nbetween many of the words in this list. The resulting set of relations does not,",
+                "cross-encoder similarity (%)": 99.39
+            },
+            "retrieval_3": {
+                "text": "d non-causative\nusages.\nFrameNets have also been developed for many other languages including Span-\nish, German, Japanese, Portuguese, Italian, and Chinese.\n21.6 Semantic Role Labeling\nSemantic role labeling (sometimes shortened as SRL) is the task of automaticallysemantic role\nlabeling\nﬁnding the semantic roles of each argument of each predicate in a sentence. Cur-\nrent approaches to semantic role labeling are based on supervised machine learning,\noften using the FrameNet and PropBank resources to specify what counts as a pred-\nicate, deﬁne the set of roles used in the task, and provide training and test sets.\nRecall that the difference between these two models of semantic roles is that\nFrameNet (21.27) employs many frame-speciﬁc frame elements as roles, while Prop-\nBank (21.28) uses a sm",
+                "cross-encoder similarity (%)": 98.27
+            },
+            "retrieval_4": {
+                "text": "meNet (21.27) employs many frame-speciﬁc frame elements as roles, while Prop-\nBank (21.28) uses a smaller number of numbered argument labels that can be inter-\npreted as verb-speciﬁc labels, along with the more general ARGM labels. Some\nexamples:\n(21.27) [You] can’t [blame] [the program] [for being unable to identify it]\nCOGNIZER TARGET EVALUEE REASON\n(21.28) [The San Francisco Examiner] issued [a special edition] [yesterday]\nARG 0 TARGET ARG 1 ARGM -TMP\n21.6.1 A Feature-based Algorithm for Semantic Role Labeling\nA simpliﬁed feature-based semantic role labeling algorithm is sketched in Fig. 21.4.\nFeature-based algorithms—from the very earliest systems like (Simmons, 1973)—\nbegin by parsing, using broad-coverage parsers to assign a parse to the input string.",
+                "cross-encoder similarity (%)": 97.86
+            },
+            "retrieval_5": {
+                "text": "21.4 • T HE PROPOSITION BANK 5\n21.4 The Proposition Bank\nThe Proposition Bank, generally referred to as PropBank, is a resource of sen-PropBank\ntences annotated with semantic roles. The English PropBank labels all the sentences\nin the Penn TreeBank; the Chinese PropBank labels sentences in the Penn Chinese\nTreeBank. Because of the difﬁculty of deﬁning a universal set of thematic roles,\nthe semantic roles in PropBank are deﬁned with respect to an individual verb sense.\nEach sense of each verb thus has a speciﬁc set of roles, which are given only numbers\nrather than names: Arg0, Arg1, Arg2, and so on. In general, Arg0 represents the\nPROTO -AGENT , and Arg1, the PROTO -PATIENT . The semantics of the other roles\nare less consistent, often being deﬁned speciﬁcally for each verb. Nonetheless the",
+                "cross-encoder similarity (%)": 95.65
+            }
+        }
+    },
+    {
+        "question": "What do valence, arousal, and dominance measure in an affect lexicon?",
+        "gold_answer": "Valence measures pleasantness, arousal measures activation or energy, and dominance measures control. Sentiment polarity mainly corresponds to valence.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "models include the two dimensions\nvalence and arousal, and many add a third, dominance. These can be deﬁned as:\nvalence: the pleasantness of the stimulus\narousal: the level of alertness, activeness, or energy provoked by the stimulus\ndominance: the degree of control or dominance exerted by the stimulus or the\nemotion\nSentiment can be viewed as a special case of this second view of emotions as points\nin space. In particular, thevalence dimension, measuring how pleasant or unpleasant\na word is, is often used directly as a measure of sentiment.\nIn these lexicon-based models of affect, the affective meaning of a word is gen-\nerally ﬁxed, irrespective of the linguistic context in which a word is used, or the\ndialect or culture of the speaker. By contrast, other models in affective science repre",
+                "cross-encoder similarity (%)": 99.9
+            },
+            "retrieval_2": {
+                "text": "than these sentiment lexicons are lexicons that assign each\nword a value on all three affective dimensions. The NRC Valence, Arousal, and\nDominance (V AD) lexicon (Mohammad, 2018a) assigns valence, arousal, and dom-\ninance scores to 20,000 words. Some examples are shown in Fig. 22.4.\nValence Arousal Dominance\nvacation .840 enraged .962 powerful .991\ndelightful .918 party .840 authority .935\nwhistle .653 organized .337 saxophone .482\nconsolation .408 effortless .120 discouraged .0090\ntorture .115 napping .046 weak .045\nFigure 22.4 Values of sample words on the emotional dimensions of Mohammad (2018a).\nThe NRC Word-Emotion Association Lexicon, also called EmoLex (Moham-EmoLex\nmad and Turney, 2013), uses the Plutchik (1980) 8 basic emotions deﬁned above.\nThe lexicon includes around 14,000 wo",
+                "cross-encoder similarity (%)": 99.78
+            },
+            "retrieval_3": {
+                "text": "are low on valence. Excited is high on arousal, while calm is low on arousal.\nControlling is high on dominance, while awed or inﬂuenced are low on dominance.\nEach word is thus represented by three numbers, corresponding to its value on each\nof the three dimensions:\nValence Arousal Dominance\ncourageous 8.0 5.5 7.4\nmusic 7.7 5.6 6.5\nheartbreak 2.5 5.7 3.6\ncub 6.7 4.0 4.2\nOsgood et al. (1957) noticed that in using these 3 numbers to represent the\nmeaning of a word, the model was representing each word as a point in a three-\ndimensional space, a vector whose three dimensions corresponded to the word’s\nrating on the three scales. This revolutionary idea that word meaning could be rep-\nresented as a point in space (e.g., that part of the meaning of heartbreak can be\nrepresented as the point [2.",
+                "cross-encoder similarity (%)": 77.05
+            },
+            "retrieval_4": {
+                "text": "20 CHAPTER 22 • L EXICONS FOR SENTIMENT , A FFECT , AND CONNOTATION\nAdditional features can be drawn from counts of words in lexicons.\n• Lexicons can also be used to detect affect in arule-based classiﬁer by picking\nthe simple majority sentiment based on counts of words in each lexicon.\n• Connotation frames express richer relations of affective meaning that a pred-\nicate encodes about its arguments.\nHistorical Notes\nThe idea of formally representing the subjective meaning of words began with Os-\ngood et al. (1957), the same pioneering study that ﬁrst proposed the vector space\nmodel of meaning described in Chapter 5. Osgood et al. (1957) had participants rate\nwords on various scales, and ran factor analysis on the ratings. The most signiﬁcant\nfactor they uncovered was the evaluative dimensi",
+                "cross-encoder similarity (%)": 3.39
+            },
+            "retrieval_5": {
+                "text": "o\n0, moderate and strong mapped to 1).\nThe NRC V AD Lexicon (Mohammad, 2018a) was built by selecting words and\nemoticons from prior lexicons and annotating them with crowd-sourcing usingbest-\nworst scaling (Louviere et al. 2015, Kiritchenko and Mohammad 2017). In best-best-worst\nscaling\nworst scaling, annotators are given N items (usually 4) and are asked which item is\nthe best (highest) and which is the worst (lowest) in terms of some property. The\nset of words used to describe the ends of the scales are taken from prior literature.\nFor valence, for example, the raters were asked:\nQ1. Which of the four words below is associated with the MOST happi-\nness / pleasure / positiveness / satisfaction / contentedness / hopefulness\nOR LEAST unhappiness / annoyance / negativeness / dissatisfaction",
+                "cross-encoder similarity (%)": 0.28
+            }
+        }
+    },
+    {
+        "question": "How does entity linking go beyond coreference resolution?",
+        "gold_answer": "Coreference groups textual mentions referring to the same entity. Entity linking associates a mention with an identified entity in an external knowledge base or ontology.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "reference resolution; coreference resolution is the task\nof associating textual mentions that corefer to the same entity. Entity linking takes\nthe further step of identifying who that entity is. It is especially important for any\nNLP task that links to a knowledge base.\nWhile there are all sorts of potential knowledge-bases, we’ll focus in this section\non Wikipedia, since it’s widely used as an ontology for NLP tasks. In this usage,\neach unique Wikipedia page acts as the unique id for a particular entity. This task of\ndeciding which Wikipedia page corresponding to an individual is being referred to\nby a text mention has its own name: wikiﬁcation (Mihalcea and Csomai, 2007).wikiﬁcation\nSince the earliest systems (Mihalcea and Csomai 2007, Cucerzan 2007, Milne\nand Witten 2008), entity linkin",
+                "cross-encoder similarity (%)": 99.66
+            },
+            "retrieval_2": {
+                "text": "3\nlinking or resolution by mapping to an ontology: a list of entities in the world, like\na gazeteer (Appendix F). Perhaps the most common ontology used for this task is\nWikipedia; each Wikipedia page acts as the unique id for a particular entity. Thus\nthe entity linking task ofwikiﬁcation (Mihalcea and Csomai, 2007) is the task of de-\nciding which Wikipedia page corresponding to an individual is being referred to by\na mention. But entity linking can be done with any ontology; for example if we have\nan ontology of genes, we can link mentions of genes in text to the disambiguated\ngene name in the ontology.\nIn the next sections we introduce the task of coreference resolution in more de-\ntail, and survey a variety of architectures for resolution. We also introduce two\narchitectures for the tas",
+                "cross-encoder similarity (%)": 99.31
+            },
+            "retrieval_3": {
+                "text": "10 CHAPTER 23 • C OREFERENCE RESOLUTION AND ENTITY LINKING\nExactly what counts as a mention and what links are annotated differs from task\nto task and dataset to dataset. For example some coreference datasets do not label\nsingletons, making the task much simpler. Resolvers can achieve much higher scores\non corpora without singletons, since singletons constitute the majority of mentions in\nrunning text, and they are often hard to distinguish from non-referential NPs. Some\ntasks use gold mention-detection (i.e. the system is given human-labeled mention\nboundaries and the task is just to cluster these gold mentions), which eliminates the\nneed to detect and segment mentions from running text.\nCoreference is usually evaluated by theCoNLL F1 score, which combines three\nmetrics: MUC, B3, and CEAF",
+                "cross-encoder similarity (%)": 96.59
+            },
+            "retrieval_4": {
+                "text": "e aremention-pair, mention-rank,\nand entity-based, each of which can make use of feature-based or neural clas-\nsiﬁers.\n• Modern coreference systems tend to be end-to-end, performing mention de-\ntection and coreference in a single end-to-end architecture.\n• Algorithms learn representations for text spans and heads, and learn to com-\npare anaphor spans with candidate antecedent spans.\n• Entity linking is the task of associating a mention in text with the representa-\ntion of some real-world entity in an ontology .\n• Coreference systems are evaluated by comparing with gold entity labels using\nprecision/recall metrics like MUC, B3, CEAF, BLANC, or LEA.\n• The Winograd Schema Challenge problems are difﬁcult coreference prob-\nlems that seem to require world knowledge or sophisticated reasoning to",
+                "cross-encoder similarity (%)": 94.44
+            },
+            "retrieval_5": {
+                "text": "the earliest systems (Mihalcea and Csomai 2007, Cucerzan 2007, Milne\nand Witten 2008), entity linking is done in (roughly) two stages: mention detec-\ntion and mention disambiguation. We’ll give two algorithms, one simple classic\nbaseline that uses anchor dictionaries and information from the Wikipedia graph\nstructure (Ferragina and Scaiella, 2011) and one modern neural algorithm (Li et al.,\n2020). We’ll focus here mainly on the application of entity linking to questions,\nsince a lot of the literature has been in that context.\n23.7.1 Linking based on Anchor Dictionaries and Web Graph\nAs a simple baseline we introduce the TAGME linker (Ferragina and Scaiella, 2011)\nfor Wikipedia, which itself draws on earlier algorithms (Mihalcea and Csomai 2007,\nCucerzan 2007, Milne and Witten 2008). Wikiﬁc",
+                "cross-encoder similarity (%)": 23.87
+            }
+        }
+    },
+    {
+        "question": "In RST, how do nucleus and satellite differ?",
+        "gold_answer": "The nucleus is more central and interpretable independently. The satellite supports it and is less independent. Some relations instead join multiple nuclei.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "A four-token test sequence has conditional probabilities 0.5, 0.25, 0.5, 0.25. What is its perplexity?",
+        "gold_answer": "Its joint probability is 1/64. Perplexity is (1/64)^(-1/4) = sqrt(8), approximately 2.8284.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "perplexityA(T ) = PA(red red red red blue )− 1\n5\n=\n((1\n3\n)5)− 1\n5\n=\n(1\n3\n)−1\n= 3 (3.19)\nBut now suppose red was very likely in the training set of a different LM B, and so\nB has the following probabilities:\nP(red) = 0.8 P(green) = 0.1 P(blue) = 0.1 (3.20)\nWe should expect the perplexity of the same test set red red red red blue for\nlanguage model B to be lower since most of the time the next color will be red, which\nis very predictable, i.e. has a high probability. So the probability of the test set will\nbe higher, and since perplexity is inversely related to probability, the perplexity will\nbe lower. Thus, although the branching factor is still 3, the perplexity or weighted\nbranching factor is smaller:\nperplexityB(T ) = PB(red red red red blue )−1/5\n= 0.04096− 1\n5\n= 0.527−1 = 1.89 (3.21)",
+                "cross-encoder similarity (%)": 15.62
+            },
+            "retrieval_2": {
+                "text": "set of n tokens w1:n, the\nperplexity is\nPerplexityθ (w1:n) = Pθ (w1:n)− 1\nn\n= n\n√\n1\nPθ (w1:n) (7.10)\nTo visualize how perplexity can be computed as a function of the probabilities the\nLM computes for each new word, we can use the chain rule to expand the computa-\ntion of probability of the test set:\nPerplexityθ (w1:n) = n\nvuu√\nn∏\ni=1\n1\nPθ (wi|w<i) (7.11)\nNote that because of the inverse in Eq. 7.10, the higher the probability of the word\nsequence, the lower the perplexity. Thus the lower the perplexity of a model on\nthe data, the better the model. Minimizing perplexity is equivalent to maximizing\nthe test set probability according to the language model. Why does perplexity use\nthe inverse probability? The inverse arises from the original deﬁnition of perplexity\nfrom cross-entropy rate in i",
+                "cross-encoder similarity (%)": 2.11
+            },
+            "retrieval_3": {
+                "text": "models as well as n-gram models.\nThe perplexity (sometimes abbreviated as PP or PPL) of a language model on aperplexity\ntest set is the inverse probability of the test set (one over the probability of the test\nset), normalized by the number of words (or tokens). For this reason it’s sometimes\ncalled the per-word or per-token perplexity. We normalize by the number of words\nN by taking the Nth root. For a test set W = w1w2 . . .wN,:\nperplexity(W ) = P(w1w2 . . .wN)− 1\nN (3.14)\n= N\n√\n1\nP(w1w2 . . .wN)\nOr we can use the chain rule to expand the probability of W:\nperplexity(W ) = N\nvuu√\nN∏\ni=1\n1\nP(wi|w1 . . .wi−1) (3.15)\nNote that because of the inverse in Eq. 3.15, the higher the probability of the word\nsequence, the lower the perplexity. Thus thethe lower the perplexity of a model on\nthe data",
+                "cross-encoder similarity (%)": 0.66
+            },
+            "retrieval_4": {
+                "text": "ram has a zero count, we simply backoff to a lower order n-gram,\nweighed by a ﬁxed (context-independent) weight. This algorithm does not produce\na probability distribution, so we’ll follow Brants et al. (2007) in referring to it asS:\nS(wi|wi−N+1: i−1) =\n\n\n\ncount ( w i− N + 1: i )\ncount ( w i− N + 1: i− 1 ) if count(wi−N+1: i) > 0\nλS(wi|wi−N+2: i−1) otherwise\n(3.31)\nThe backoff terminates in the unigram, which has scoreS(w) = count(w)\nN . Brants et al.\n(2007) ﬁnd that a value of 0.4 worked well for λ.\n3.7 Advanced: Perplexity’s Relation to Entropy\nWe introduced perplexity in Section 3.3 as a way to evaluate n-gram models on\na test set. A better n-gram model is one that assigns a higher probability to the\ntest data, and perplexity is a normalized version of the probability of the test set",
+                "cross-encoder similarity (%)": 0.04
+            },
+            "retrieval_5": {
+                "text": "a function of both the text and the lan-\nguage model: given a text W, different language models will have different perplex-\nities. Because of this, perplexity can be used to compare different language models.\nFor example, here we trained unigram, bigram, and trigram models on 38 million\nwords from the Wall Street Journalnewspaper. We then computed the perplexity of\neach of these models on a WSJ test set using Eq. 3.16 for unigrams, Eq. 3.17 for\nbigrams, and the corresponding equation for trigrams. The table below shows the\nperplexity of the 1.5 million word test set according to each of the language models.\nUnigram Bigram Trigram\nPerplexity 962 170 109\nAs we see above, the more information the n-gram gives us about the word\nsequence, the higher the probability the n-gram will assign to th",
+                "cross-encoder similarity (%)": 0.03
+            }
+        }
+    },
+    {
+        "question": "A binary classifier has TP=24, FP=6, and FN=16. Calculate positive-class precision, recall, and F1.",
+        "gold_answer": "Precision = 24/30 = 0.8; recall = 24/40 = 0.6; F1 = 48/70 ≈ 0.6857.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "things that we are supposed to be looking for.\nThere are many ways to deﬁne a single metric that incorporates aspects of both\nprecision and recall. The simplest of these combinations is the F-measure (vanF-measure\nRijsbergen, 1975) , deﬁned as:\nFβ = (β 2 + 1)PR\nβ 2P + R\nThe β parameter differentially weights the importance of recall and precision,\nbased perhaps on the needs of an application. Values of β > 1 favor recall, while\nvalues of β < 1 favor precision. When β = 1, precision and recall are equally bal-\nanced; this is the most frequently used metric, and is called Fβ =1 or just F1:F1\nF1 = 2PR\nP + R (4.42)\nF-measure comes from a weighted harmonic mean of precision and recall. The\nharmonic mean of a set of numbers is the reciprocal of the arithmetic mean of recip-\nrocals:\nHarmonicMean(",
+                "cross-encoder similarity (%)": 59.3
+            },
+            "retrieval_2": {
+                "text": "4.9 • E VALUATION : P RECISION , R ECALL , F- MEASURE 23\nRecall measures the percentage of items actually present in the input that wererecall\ncorrectly identiﬁed by the system. Recall is deﬁned as\nRecall = true positives\ntrue positives + false negatives\nPrecision and recall will help solve the problem with the useless “nothing is\npie” classiﬁer. This classiﬁer, despite having a fabulous accuracy of 99.99%, has\na terrible recall of 0 (since there are no true positives, and 100 false negatives, the\nrecall is 0/100). You should convince yourself that the precision at ﬁnding relevant\ntweets is equally problematic. Thus precision and recall, unlike accuracy, emphasize\ntrue positives: ﬁnding the things that we are supposed to be looking for.\nThere are many ways to deﬁne a single metric that inc",
+                "cross-encoder similarity (%)": 53.51
+            },
+            "retrieval_3": {
+                "text": ". ??.\n4.9 Evaluation: Precision, Recall, F-measure\nTo introduce the methods for evaluating text classiﬁcation, let’s ﬁrst consider some\nsimple binary detection tasks. For example, in spam detection, our goal is to label\nevery text as being in the spam category (“positive”) or not in the spam category\n(“negative”). For each item (email document) we therefore need to know whether\nour system called it spam or not. We also need to know whether the email is actually\nspam or not, i.e. the human-deﬁned labels for each document that we are trying to\nmatch. We will refer to these human labels as the gold labels.gold labels",
+                "cross-encoder similarity (%)": 8.52
+            },
+            "retrieval_4": {
+                "text": "ead of accuracy we generally turn to two other metrics shown in\nFig. 4.7: precision and recall. Precision measures the percentage of the items thatprecision\nthe system detected (i.e., the system labeled as positive) that are in fact positive (i.e.,\nare positive according to the human gold labels). Precision is deﬁned as\nPrecision = true positives\ntrue positives + false positives",
+                "cross-encoder similarity (%)": 7.7
+            },
+            "retrieval_5": {
+                "text": "tweets about something completely unrelated. Imagine a\nsimple classiﬁer that stupidly classiﬁed every tweet as “not about pie”. This classiﬁer\nwould have 999,900 true negatives and only 100 false negatives for an accuracy of\n999,900/1,000,000 or 99.99%! What an amazing accuracy level! Surely we should\nbe happy with this classiﬁer? But of course this fabulous ‘no pie’ classiﬁer would\nbe completely useless, since it wouldn’t ﬁnd a single one of the customer comments\nwe are looking for. In other words, accuracy is not a good metric when the goal is\nto discover something that is rare, or at least not completely balanced in frequency,\nwhich is a very common situation in the world.\nThat’s why instead of accuracy we generally turn to two other metrics shown in\nFig. 4.7: precision and recall. Prec",
+                "cross-encoder similarity (%)": 0.06
+            }
+        }
+    },
+    {
+        "question": "Why must backpropagation propagate derivatives backward through a computation graph?",
+        "gold_answer": "The chain rule expresses a parameter’s effect on the loss through downstream operations. Working backward reuses intermediate derivatives to compute gradients for earlier nodes efficiently.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "6.6 • T RAINING NEURAL NETS 21\noperation left to right, passing the outputs of each computation as the input to the\nnext node.\ne=a+d\nd = 2b L=ce\na=3\nb=1\nc=-2\ne=5d=2\nL=-10\nforward pass\na\nb\nc\nFigure 6.15 Computation graph for the functionL(a,b,c) = c(a+2b), with values for input\nnodes a = 3, b = 1, c =−2, showing the forward pass computation of L.\n6.6.4 Backward differentiation on computation graphs\nThe importance of the computation graph comes from the backward pass, which\nis used to compute the derivatives that we’ll need for the weight update. In this\nexample our goal is to compute the derivative of the output function L with respect\nto each of the input variables, i.e., ∂L\n∂a , ∂L\n∂b , and ∂L\n∂c . The derivative ∂L\n∂a tells us how\nmuch a small change in a affects L.\nBackwards differentia",
+                "cross-encoder similarity (%)": 85.92
+            },
+            "retrieval_2": {
+                "text": "l the nodes in the graph. Fig. 6.16 shows part of the backward computation\nat one node e. Each node takes an upstream gradient that is passed in from its parent\nnode to the right, and for each of its inputs computes a local gradient (the gradient\nof its output with respect to its input), and uses the chain rule to multiply these two\nto compute a downstream gradient to be passed on to the next earlier node.\nLet’s now compute the 3 derivatives we need. Since in the computation graph\nL = ce, we can directly compute the derivative ∂L\n∂c :\n∂L\n∂c = e (6.33)\nFor the other two, we’ll need to use the chain rule:\n∂L\n∂a = ∂L\n∂e\n∂e\n∂a\n∂L\n∂b = ∂L\n∂e\n∂e\n∂d\n∂d\n∂b (6.34)",
+                "cross-encoder similarity (%)": 79.09
+            },
+            "retrieval_3": {
+                "text": "ral networks, it turns out to be the same as a more general procedure\ncalled backward differentiation , which depends on the notion of computation\ngraphs. Let’s see how that works in the next subsection.\n6.6.3 Computation Graphs\nA computation graph is a representation of the process of computing a mathematical\nexpression, in which the computation is broken down into separate operations, each\nof which is modeled as a node in a graph.\nConsider computing the function L(a,b,c) = c(a + 2b). If we make each of the\ncomponent addition and multiplication operations explicit, and add names (d and e)\nfor the intermediate outputs, the resulting series of computations is:\nd = 2∗ b\ne = a + d\nL = c∗ e\nWe can now represent this as a graph, with nodes for each operation, and di-\nrected edges showing the ou",
+                "cross-encoder similarity (%)": 19.55
+            },
+            "retrieval_4": {
+                "text": "a = 1, ∂e\n∂d = 1\nd = 2b : ∂d\n∂b = 2\nIn the backward pass, we compute each of these partials along each edge of the\ngraph from right to left, using the chain rule just as we did above. Thus we begin by\ncomputing the downstream gradients from nodeL, which are ∂L\n∂e and ∂L\n∂c . For node e,\nwe then multiply this upstream gradient ∂L\n∂e by the local gradient (the gradient of the\noutput with respect to the input), ∂e\n∂d to get the output we send back to node d: ∂L\n∂d .\nAnd so on, until we have annotated the graph all the way to all the input variables.\nThe forward pass conveniently already will have computed the values of the forward\nintermediate variables we need (liked and e) to compute these derivatives. Fig. 6.17\nshows the backward pass.\ne=d+a\nd = 2b L=ce\na=3\nb=1\ne=5d=2\nL=-10\n \na\nb\nc ∂L=5∂c",
+                "cross-encoder similarity (%)": 13.43
+            },
+            "retrieval_5": {
+                "text": "∂L\n∂c . The derivative ∂L\n∂a tells us how\nmuch a small change in a affects L.\nBackwards differentiation makes use of the chain rule in calculus, so let’s re-chain rule\nmind ourselves of that. Suppose we are computing the derivative of a composite\nfunction f (x) = u(v(x)). The derivative of f (x) is the derivative ofu(x) with respect\nto v(x) times the derivative of v(x) with respect to x:\nd f\ndx = du\ndv· dv\ndx (6.31)\nThe chain rule extends to more than two functions. If computing the derivative of a\ncomposite function f (x) = u(v(w(x))), the derivative of f (x) is:\nd f\ndx = du\ndv· dv\ndw· dw\ndx (6.32)\nThe intuition of backward differentiation is to pass gradients back from the ﬁnal\nnode to all the nodes in the graph. Fig. 6.16 shows part of the backward computation\nat one node e. Each node",
+                "cross-encoder similarity (%)": 7.75
+            }
+        }
+    },
+    {
+        "question": "Token probabilities are A=.55, B=.25, C=.15, D=.05. Which survive top-k with k=2 versus top-p with p=.90?",
+        "gold_answer": "Top-k retains A and B. Top-p retains A, B, and C, the smallest leading set reaching .90 probability mass. Renormalize the retained probabilities before sampling.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "ossible next token. Each of thesek×V\nhypotheses is scored by P(yi|x,y<i): the product of the probability of the current\nword choice multiplied by the probability of the path that led to it. We then prune\nthe k×V hypotheses down to the k best hypotheses, so there are never more than k",
+                "cross-encoder similarity (%)": 0.04
+            },
+            "retrieval_2": {
+                "text": ".1 Top- k sampling\nTop-k sampling is a simple generalization of greedy decoding. Instead of choosingtop-k sampling\nthe single most probable word to generate, we ﬁrst truncate the distribution to the\ntop k most likely words, renormalize to produce a legitimate probability distribution,\nand then randomly sample from within thesek words according to their renormalized\nprobabilities. More formally:\n1. Choose in advance a number of words k\n2. For each word in the vocabulary V , use the language model to compute the\nlikelihood of this word given the context p(wt|w<t )\n3. Sort the words by their likelihood, and throw away any word that is not one of\nthe top k most probable words.\n4. Renormalize the scores of the k words to be a legitimate probability distribu-",
+                "cross-encoder similarity (%)": 0.02
+            },
+            "retrieval_3": {
+                "text": "e the best k = 2\nto continue. At time 1, the frontier has the best 2 options from the initial decoder state: arrived and the. We\nextend each, compute the probability of all the hypotheses so far ( arrived the, arrived aardvark, the green, the\nwitch) and again chose the best 2 ( the green and the witch) to be the search frontier. The images on the arcs\nschematically represent the decoders that must be run at each step to score the next words (for simplicity not\ndepicting cross-attention).\nAt subsequent steps, each of the k best hypotheses is extended incrementally\nby being passed to distinct decoders, which each generate a softmax over the entire\nvocabulary to extend the hypothesis to every possible next token. Each of thesek×V\nhypotheses is scored by P(yi|x,y<i): the product of the probabi",
+                "cross-encoder similarity (%)": 0.02
+            },
+            "retrieval_4": {
+                "text": "20 CHAPTER 8 • T RANSFORMERS\ntion.\n5. Randomly sample a word from within these remaining k most-probable words\naccording to its probability.\nWhen k = 1, top-k sampling is identical to greedy decoding. Setting k to a larger\nnumber than 1 leads us to sometimes select a word which is not necessarily the most\nprobable, but is still probable enough, and whose choice results in generating more\ndiverse but still high-enough-quality text.\n8.6.2 Nucleus or top- p sampling\nOne problem with top-k sampling is that k is ﬁxed, but the shape of the probability\ndistribution over words differs in different contexts. If we set k = 10, sometimes\nthe top 10 words will be very likely and include most of the probability mass, but\nother times the probability distribution will be ﬂatter and the top 10 words will",
+                "cross-encoder similarity (%)": 0.01
+            },
+            "retrieval_5": {
+                "text": "ability mass, but\nother times the probability distribution will be ﬂatter and the top 10 words will only\ninclude a small part of the probability mass.\nAn alternative, called top-p sampling or nucleus sampling (Holtzman et al.,top-p sampling\n2020), is to keep not the top k words, but the top p percent of the probability mass.\nThe goal is the same; to truncate the distribution to remove the very unlikely words.\nBut by measuring probability rather than the number of words, the hope is that the\nmeasure will be more robust in very different contexts, dynamically increasing and\ndecreasing the pool of word candidates.\nGiven a distributionP(wt|w<t ), we sort the distribution from most probable, and\nthen the top-p vocabulary V (p) is the smallest set of words such that\n∑\nw∈V (p)\nP(w|w<t )≥ p. (8.48",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "You have instruction–answer demonstrations and preferred/rejected answer pairs. How would SFT and DPO use these differently?",
+        "gold_answer": "SFT predicts demonstration response tokens conditioned on instructions. DPO uses preference pairs to favor preferred responses relative to a reference policy, without fitting a separate reward model.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "on them using the same\nlanguage modeling objective used to train the original model. In the case of causal\nmodels, this is just the standard guess-the-next-token objective. The training corpus\nof instructions is simply treated as additional training data, and the gradient-based\nupdates are generated using cross-entropy loss as in the original model training.\nEven though it is trained to predict the next token (which we traditionally think of\nas self-supervised), we call this method supervised ﬁne tuning (or SFT) becauseSFT\nunlike in pretraining, each instruction or question in the instruction tuning data has\na supervised objective: a correct answer to the question or a response to the instruc-\ntion.\nHow does instruction tuning differ from the other kinds of ﬁnetuning introduced\nin Chapter",
+                "cross-encoder similarity (%)": 34.04
+            },
+            "retrieval_2": {
+                "text": "in Fig. 9.9, DPO uses gradient descent with this loss over the\navailable training data to optimize the policy πθ , a policy which initialized with an\nexisting pretrained, ﬁnetuned LLM.\nReference\nSupervised\nLearning\nPreference Data:\nPrompt/output pairs: \nPreferences:  \nPolicy\n…\n…\n…\n…\nUpdated\nPolicy\nPreference-Based \nSupervised Learning (DPO)\nFigure 9.9 Preference-based alignment with Direct Preference Optimization.\nDPO has several advantages over PPO, the explicitly RL-based approach de-\nscribed earlier in 9.3.1.\n• DPO does not require training an explicit reward model.\n• DPO learns directly from the preferences contained in D without the need for\ncomputationally expensive online sampling from πθ .",
+                "cross-encoder similarity (%)": 32.8
+            },
+            "retrieval_3": {
+                "text": "2 CHAPTER 9 • P OST-TRAINING : I NSTRUCTION TUNING , ALIGNMENT , AND TEST-T IME COMPUTE\nneed for models to be helpful and non-harmful.\nTo address these two problems, language models include two additional kinds\nof training for model alignment: methods designed to adjust LLMs to better alignmodel\nalignment\nthem to human needs for models to be helpful and non-harmful. In the ﬁrst tech-\nnique, instruction tuning (sometimes called SFT for supervised ﬁnetuning), mod-\nels are ﬁnetuned on a corpus of instructions and questions with their corresponding\nresponses. We’ll describe this in the next section.\nIn the second technique, preference alignment, (sometimes called RLHF or\nDPO after two speciﬁc instantiations, Reinforcement Learning from Human Feed-\nback and Direct Preference Optimization), a se",
+                "cross-encoder similarity (%)": 17.14
+            },
+            "retrieval_4": {
+                "text": "plicit reward model that is then used in combination with RL methods\nto optimize models based on 9.6. In the second, an insightful rearrangement of\nthe closed form solution to 9.6 is used to ﬁnetune models directly from existing\npreference data.\n9.3.1 Reinforcement Learning with Preference Feedback (PPO)\nTBD\n9.3.2 Direct Preference Optimization\nDirect Preference Optimization (DPO) (Rafailov et al., 2023) employs gradient-\nbased learning to optimize candidate LLMs using preference data, without learning\nan explicit reward model or sampling from the model being updated. Recall that\nunder the Bradley-Terry model, the probability of a preference pair is the logistic\nsigmoid of the difference in the rewards for each of the options. And in an RL\nframework the scores, z, are provided by a reward",
+                "cross-encoder similarity (%)": 7.32
+            },
+            "retrieval_5": {
+                "text": "performing at a high\nlevel – models that have been pretrained on large amounts of data, then ﬁnetuned\nusing instruction tuning, and only then further improved with preference data. The\nemphasis here is not to radically alter the behavior an existing model, but rather to\nnudge it towards preferred behaviors.\n…\nPreference-Based\nAlignment\nReward\nBased\nObjective\n…\nInstruction-Tuned \nLLM\nPreference-Aligned\nModel\nReward\nDriven Model\nUpdates\nPreference Data:\nPrompt/output pairs: \nPreferences:  \nFigure 9.8 Preference-based model alignment.\nGiven this, if we optimize for the rewards as in 9.4, the pretrained LLM will\ntypically forget everything it learned during pretraining as it pivots to seeking high\nrewards from the relatively small amount of available preference data. To avoid this,\na term is a",
+                "cross-encoder similarity (%)": 0.89
+            }
+        }
+    },
+    {
+        "question": "Using BERT, how would you produce one sentiment label per review versus one entity tag per token?",
+        "gold_answer": "Use the final [CLS] representation with a classification head for review sentiment. For entity tagging, classify each token’s final contextual representation.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "’s task is to assign a label chosen from a small\nﬁxed set of labels to each token in the sequence. One of the most common sequence\nlabeling task is named entity recognition.\n10.5.1 Named Entities\nA named entity is, roughly speaking, anything that can be referred to with a propernamed entity\nname: a person, a location, an organization. The task of named entity recognitionnamed entity\nrecognition\n(NER) is to ﬁnd spans of text that constitute proper names and tag the type of theNER\nentity. Four entity tags are most common: PER (person), LOC (location), ORG\n(organization), or GPE (geo-political entity). However, the term named entity is\ncommonly extended to include things that aren’t entities per se, including temporal\nexpressions like dates and times, and even numerical expressions like price",
+                "cross-encoder similarity (%)": 19.86
+            },
+            "retrieval_2": {
+                "text": "r from each token in the sequence.\nFor BERT, we instead add a new unique token to the vocabulary called [CLS], and\nprepended it to the start of all input sequences, both during pretraining and encoding.\nThe output vector in the ﬁnal layer of the model for the [CLS] input represents\nthe entire input sequence and serves as the input to a classiﬁer head , a logisticclassiﬁer head\nregression or neural network classiﬁer that makes the relevant decision.\nAs an example, let’s return to the problem of sentiment classiﬁcation. Finetuning\na classiﬁer for this application involves learning a set of weights, WC, to map the\noutput vector for the [CLS] token— hL\nCLS—to a set of scores over the possible senti-\nment classes. Assuming a three-way sentiment classiﬁcation task (positive, negative,\nneutral) a",
+                "cross-encoder similarity (%)": 12.59
+            },
+            "retrieval_3": {
+                "text": "labeler (HMM, CRF, RNN, Transformer, etc.) is trained to label each\ntoken in a text with tags that indicate the presence (or absence) of particular kinds\nof named entities.",
+                "cross-encoder similarity (%)": 3.48
+            },
+            "retrieval_4": {
+                "text": "ssociated the feature is with the class.\n22.8 Lexicon-based methods for Entity-Centric Affect\nWhat if we want to get an affect score not for an entire document, but for a particular\nentity in the text? The entity-centric method of Field and Tsvetkov (2019) combines\naffect lexicons with contextual embeddings to assign an affect score to an entity in\ntext. In the context of affect about people, they relabel the Valence/Arousal/Dominance\ndimension as Sentiment/Agency/Power. The algorithm ﬁrst trains classiﬁers to map\nembeddings to scores:\n1. For each word w in the training corpus:\n(a) Use off-the-shelf pretrained encoders (like BERT) to extract a contextual\nembedding e for each instance of the word. No additional ﬁnetuning is\ndone.\n(b) Average over the e embeddings of each instance of w to ob",
+                "cross-encoder similarity (%)": 1.85
+            },
+            "retrieval_5": {
+                "text": "to assign the sentiment class + or− to a review\ndocument doc. We’ll represent each input observation by the 6 features x1 . . .x6 of\nthe input shown in the following table; Fig. 4.2 shows features in a sample mini test\ndocument.\nVar Deﬁnition Value in Fig. 4.2\nx1 count(positive lexicon words∈ doc) 3\nx2 count(negative lexicon words∈ doc) 2\nx3\n{ 1 if “no” ∈ doc\n0 otherwise 1\nx4 count(1st and 2nd pronouns∈ doc) 3\nx5\n{ 1 if “!” ∈ doc\n0 otherwise 0\nx6 ln(word+punctuation count of doc) ln(66) = 4.19\n It's hokey . There are virtually no surprises , and the writing is second-rate . \nSo why was it so enjoyable  ? For one thing , the cast is\n great . Another nice touch is the music . I was overcome with the urge to get off\n the couch and start dancing .  It sucked me in , and it'll do the same to y",
+                "cross-encoder similarity (%)": 0.08
+            }
+        }
+    },
+    {
+        "question": "Does increasing translation beam width from 1 to 4 guarantee the highest-probability complete translation? Explain.",
+        "gold_answer": "The search retains four partial hypotheses rather than one. Pruning can still discard a prefix of the globally highest-scoring completion, so finite-width beam search remains a heuristic.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "14 CHAPTER 12 • M ACHINE TRANSLATION\nhypotheses at the frontier of the search, and never more than k decoders. Fig. 12.8\nillustrates this with a beam width of 2 for the beginning of The green witch arrived.\nThis process continues until an EOS is generated indicating that a complete can-\ndidate output has been found. At this point, the completed hypothesis is removed\nfrom the frontier and the size of the beam is reduced by one. The search continues\nuntil the beam has been reduced to 0. The result will be k hypotheses.\nTo score each node by its log probability, we use the chain rule of probability to\nbreak down p(y|x) into the product of the probability of each word given its prior\ncontext, which we can turn into a sum of logs (for an output string of length t):\nscore(y) = logP(y|x)\n= log (P",
+                "cross-encoder similarity (%)": 43.79
+            },
+            "retrieval_2": {
+                "text": "12 CHAPTER 12 • M ACHINE TRANSLATION\nAs in that case, we use teacher forcing in the decoder. Recall that in teacher forc-teacher forcing\ning, at each time step in decoding we force the system to use the gold target token\nfrom training as the next input xt+1, rather than allowing it to rely on the (possibly\nerroneous) decoder output ˆyt.\n12.4 Decoding in MT: Beam Search\nRecall the greedy decoding algorithm from Chapter 8: at each time step t in gen-\neration, the output yt is chosen by computing the probability for each word in the\nvocabulary and then choosing the highest probability word (the argmax):\nˆwt = argmaxw∈V P(w|w<t ) (12.14)\nA problem with greedy decoding is that what looks high probability at wordt might\nturn out to have been the wrong choice once we get to wordt +1. The beam sea",
+                "cross-encoder similarity (%)": 4.82
+            },
+            "retrieval_3": {
+                "text": "12.4 • D ECODING IN MT: B EAM SEARCH 13\nThe solution: beam search\nInstead, MT systems generally decode usingbeam search, a heuristic search methodbeam search\nﬁrst proposed by Lowerre (1976). In beam search, instead of choosing the best token\nto generate at each timestep, we keep k possible tokens at each step. This ﬁxed-size\nmemory footprint k is called the beam width, on the metaphor of a ﬂashlight beambeam width\nthat can be parameterized to be wider or narrower.\nThus at the ﬁrst step of decoding, we compute a softmax over the entire vocab-\nulary, assigning a probability to each word. We then select the k-best options from\nthis softmax output. These initial k outputs are the search frontier and these k initial\nwords are called hypotheses. A hypothesis is an output sequence, a translation-",
+                "cross-encoder similarity (%)": 2.32
+            },
+            "retrieval_4": {
+                "text": "ication with their respective scores,\nor if we just need a single translation we can pass the most probable hypothesis.\n12.4.1 Minimum Bayes Risk Decoding\nMinimum Bayes risk or MBR decoding is an alternative decoding algorithm thatminimum\nBayes risk\nMBR can work even better than beam search and also tends to be better than the other\ndecoding algorithms like temperature sampling introduced in Section ??.",
+                "cross-encoder similarity (%)": 0.33
+            },
+            "retrieval_5": {
+                "text": "aths\nfunction NEWSTATE(state, word, word prob) returns new state\nfunction ADDTOBEAM(state, frontier, width) returns updated frontier\nif LENGTH (frontier) < width then\nfrontier← INSERT (state, frontier)\nelse if SCORE (state) > SCORE (WORST OF(frontier))\nfrontier← REMOVE (WORST OF(frontier))\nfrontier← INSERT (state, frontier)\nreturn frontier\nFigure 12.10 Beam search decoding.\nsame length.) For this reason we often apply length normalization methods, like\ndividing the logprob by the number of words:\nscore(y) = 1\nt logP(y|x) = 1\nt\nt∑\ni=1\nlogP(yi|y1, ...,yi−1,x) (12.16)\nFor MT we generally use beam widthsk between 5 and 10, giving usk hypotheses at\nthe end. We can pass allk to the downstream application with their respective scores,\nor if we just need a single translation we can pass the most p",
+                "cross-encoder similarity (%)": 0.01
+            }
+        }
+    },
+    {
+        "question": "Why can a bidirectional RNN usefully tag a complete sentence but cannot use its backward context for ordinary online next-token prediction?",
+        "gold_answer": "Tagging has the complete input, so representations can combine left and right contexts. During online generation, the future tokens needed by the backward RNN do not yet exist.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "14 CHAPTER 13 • RNN S AND LSTM S\nRNN 2 \nRNN 1\nx1 x2 x3 xn\nhn\n→\nh1\n←\nhn\n→\nSoftmax\nFFN\nh1\n←\nFigure 13.12 A bidirectional RNN for sequence classiﬁcation. The ﬁnal hidden units from\nthe forward and backward passes are combined to represent the entire sequence. This com-\nbined representation serves as input to the subsequent classiﬁer.\ncontext. Ideally, a network should be able to retain the distant information about\nplural ﬂights until it is needed, while still processing the intermediate parts of the\nsequence correctly.\nOne reason for the inability of RNNs to carry forward critical information is that\nthe hidden layers, and, by extension, the weights that determine the values in the hid-\nden layer, are being asked to perform two tasks simultaneously: provide information\nuseful for the current",
+                "cross-encoder similarity (%)": 83.08
+            },
+            "retrieval_2": {
+                "text": "13.5 • T HE LSTM 13\nFig. 13.11 illustrates such a bidirectional network that concatenates the outputs of\nthe forward and backward pass. Other simple ways to combine the forward and\nbackward contexts include element-wise addition or multiplication. The output at\neach step in time thus captures information to the left and to the right of the current\ninput. In sequence labeling applications, these concatenated outputs can serve as the\nbasis for a local labeling decision.\nRNN 2 \nRNN 1\nx1\ny2y1 y3 yn\nconcatenated\noutputs\nx2 x3 xn\nFigure 13.11 A bidirectional RNN. Separate models are trained in the forward and back-\nward directions, with the output of each model at each time point concatenated to represent\nthe bidirectional state at that time point.\nBidirectional RNNs have also proven to be quite",
+                "cross-encoder similarity (%)": 63.52
+            },
+            "retrieval_3": {
+                "text": "13.4 • S TACKED AND BIDIRECTIONAL RNN ARCHITECTURES 11\nThis simple architecture underlies state-of-the-art approaches to applications\nsuch as machine translation, summarization, and question answering. The key to\nthese approaches is to prime the generation component with an appropriate context.\nThat is, instead of simply using <s> to get things started we can provide a richer\ntask-appropriate context; for translation the context is the sentence in the source\nlanguage; for summarization it’s the long text we want to summarize.\nSo long\n<s>\nand\nSo long and\n?Sampled Word\nSoftmax\nEmbedding\nInput Word\nRNN\nFigure 13.9 Autoregressive generation with an RNN-based neural language model.\n13.4 Stacked and Bidirectional RNN architectures\nRecurrent networks are quite ﬂexible. By combining the feedforwar",
+                "cross-encoder similarity (%)": 26.16
+            },
+            "retrieval_4": {
+                "text": "nd Bidirectional RNN architectures\nRecurrent networks are quite ﬂexible. By combining the feedforward nature of un-\nrolled computational graphs with vectors as common inputs and outputs, complex\nnetworks can be treated as modules that can be combined in creative ways. This\nsection introduces two of the more common network architectures used in language\nprocessing with RNNs.\n13.4.1 Stacked RNNs\nIn our examples thus far, the inputs to our RNNs have consisted of sequences of\nword or character embeddings (vectors) and the outputs have been vectors useful for\npredicting words, tags or sequence labels. However, nothing prevents us from using\nthe entire sequence of outputs from one RNN as an input sequence to another one.\nStacked RNNs consist of multiple networks where the output of one layer ser",
+                "cross-encoder similarity (%)": 22.06
+            },
+            "retrieval_5": {
+                "text": "it is quite difﬁcult to train RNNs for tasks that require a network to make\nuse of information distant from the current point of processing. Despite having ac-\ncess to the entire preceding sequence, the information encoded in hidden states tends\nto be fairly local, more relevant to the most recent parts of the input sequence and\nrecent decisions. Yet distant information is critical to many language applications.\nConsider the following example in the context of language modeling.\n(13.19) The ﬂights the airline was canceling were full.\nAssigning a high probability towas following airline is straightforward since airline\nprovides a strong local context for the singular agreement. However, assigning an\nappropriate probability to were is quite difﬁcult, not only because the plural ﬂights\nis qu",
+                "cross-encoder similarity (%)": 0.85
+            }
+        }
+    },
+    {
+        "question": "Under exact entity-span-and-type scoring, gold is [New York City] as LOC, but prediction is [New York] as LOC. What errors result?",
+        "gold_answer": "The shortened prediction is not a true positive. Count one false positive for the predicted span and one false negative for the missed full span.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "ss, with L the length of the passage and N the number of\ncandidates:\nLMD =− 1\nN\n∑\n1≤i≤ j≤min(i+L−1,n)\n(\ny[i, j] log p([i, j]) + (1− y[i, j])log(1− p([i, j]))\n)\n(23.70)\nwith y[i, j] = 1 if [i, j] is a gold mention span, else 0. The entity linking loss is:\nLED =−logp (eg|[i, j]) (23.71)\nwhere eg is the gold entity for mention [i, j].\n23.8 Evaluation of Coreference Resolution\nWe evaluate coreference algorithms model-theoretically, comparing a set ofhypoth-\nesis chains or clusters H produced by the system against a set of gold or reference\nchains or clusters R from a human labeling, and reporting precision and recall.\nHowever, there are a wide variety of methods for doing this comparison. In fact,\nthere are 5 common metrics used to evaluate coreference algorithms: the link based\nMUC (Vilain et",
+                "cross-encoder similarity (%)": 0.2
+            },
+            "retrieval_2": {
+                "text": "17.3 • N AMED ENTITIES AND NAMED ENTITY TAGGING 7\nUnlike part-of-speech tagging, where there is no segmentation problem since\neach word gets one tag, the task of named entity recognition is to ﬁnd and label\nspans of text, and is difﬁcult partly because of the ambiguity of segmentation; we\nneed to decide what’s an entity and what isn’t, and where the boundaries are. Indeed,\nmost words in a text will not be named entities. Another difﬁculty is caused by type\nambiguity. The mention JFK can refer to a person, the airport in New York, or any\nnumber of schools, bridges, and streets around the United States. Some examples of\nthis kind of cross-type confusion are given in Figure 17.6.\n[PER Washington] was born into slavery on the farm of James Burroughs.\n[ORG Washington] went up 2 games to 1 in th",
+                "cross-encoder similarity (%)": 0.07
+            },
+            "retrieval_3": {
+                "text": "10 CHAPTER 23 • C OREFERENCE RESOLUTION AND ENTITY LINKING\nExactly what counts as a mention and what links are annotated differs from task\nto task and dataset to dataset. For example some coreference datasets do not label\nsingletons, making the task much simpler. Resolvers can achieve much higher scores\non corpora without singletons, since singletons constitute the majority of mentions in\nrunning text, and they are often hard to distinguish from non-referential NPs. Some\ntasks use gold mention-detection (i.e. the system is given human-labeled mention\nboundaries and the task is just to cluster these gold mentions), which eliminates the\nneed to detect and segment mentions from running text.\nCoreference is usually evaluated by theCoNLL F1 score, which combines three\nmetrics: MUC, B3, and CEAF",
+                "cross-encoder similarity (%)": 0.04
+            },
+            "retrieval_4": {
+                "text": "each count as a single response.\nThe fact that named entity tagging has a segmentation component which is not\npresent in tasks like text categorization or part-of-speech tagging causes some prob-\nlems with evaluation. For example, a system that labeled Jane but not Jane Vil-\nlanueva as a person would cause two errors, a false positive for O and a false nega-\ntive for I-PER. In addition, using entities as the unit of response but words as the unit\nof training means that there is a mismatch between the training and test conditions.\n17.7 Further Details\nIn this section we summarize a few remaining details of the data and models for\npart-of-speech tagging and NER, beginning with data. Since the algorithms we have",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "reference is usually evaluated by theCoNLL F1 score, which combines three\nmetrics: MUC, B3, and CEAFe; Section 23.8 gives the details.\nLet’s mention a few characteristics of one popular coreference dataset, OntoNotes\n(Pradhan et al. 2007b, Pradhan et al. 2007a), and the CoNLL 2012 Shared Task\nbased on it (Pradhan et al., 2012a). OntoNotes contains hand-annotated Chinese\nand English coreference datasets of roughly one million words each, consisting of\nnewswire, magazine articles, broadcast news, broadcast conversations, web data and\nconversational speech data, as well as about 300,000 words of annotated Arabic\nnewswire. The most important distinguishing characteristic of OntoNotes is that\nit does not label singletons, simplifying the coreference task, since singletons rep-\nresent 60%-70% of",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Of 10 evaluated tokens, a dependency parser gives 8 the correct head and 6 both the correct head and label. Find UAS and LAS.",
+        "gold_answer": "UAS is 8/10 = 80%. LAS is 6/10 = 60%. Correct labels without correct heads do not count toward LAS.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "orrect dependency relation.\nUnlabeled attachment simply looks at the correctness of the assigned head, ignor-\ning the dependency relation. Given a system output and a corresponding reference\nparse, accuracy is simply the percentage of words in an input that are assigned the\ncorrect head with the correct relation. These metrics are usually referred to as the\nlabeled attachment score (LAS) and unlabeled attachment score (UAS). Finally, we\ncan make use of a label accuracy score (LS), the percentage of tokens with correct\nlabels, ignoring where the relations are coming from.\nAs an example, consider the reference parse and system parse for the following\nexample shown in Fig. 19.15.\n(19.18) Book me the ﬂight through Houston.\nThe system correctly ﬁnds 4 of the 6 dependency relations present in th",
+                "cross-encoder similarity (%)": 97.05
+            },
+            "retrieval_2": {
+                "text": "e the ﬂight through Houston.\nThe system correctly ﬁnds 4 of the 6 dependency relations present in the reference\nparse and receives an LAS of 2/3. However, one of the 2 incorrect relations found\nby the system holds between book and ﬂight, which are in a head-dependent relation\nin the reference parse; the system therefore achieves a UAS of 5/6.\nBeyond attachment scores, we may also be interested in how well a system is\nperforming on a particular kind of dependency relation, for example NSUBJ , across",
+                "cross-encoder similarity (%)": 72.55
+            },
+            "retrieval_3": {
+                "text": "een the words.\n19.4 Evaluation\nAs with phrase structure-based parsing, the evaluation of dependency parsers pro-\nceeds by measuring how well they work on a test set. An obvious metric would be\nexact match (EM)—how many sentences are parsed correctly. This metric is quite\npessimistic, with most sentences being marked wrong. Such measures are not ﬁne-\ngrained enough to guide the development process. Our metrics need to be sensitive\nenough to tell if actual improvements are being made.\nFor these reasons, the most common method for evaluating dependency parsers\nare labeled and unlabeled attachment accuracy. Labeled attachment refers to the\nproper assignment of a word to its head along with the correct dependency relation.\nUnlabeled attachment simply looks at the correctness of the assigned hea",
+                "cross-encoder similarity (%)": 36.0
+            },
+            "retrieval_4": {
+                "text": "22 CHAPTER 19 • D EPENDENCY PARSING\nBook me the ﬂight through Houston\n(a) Reference\niobj\nobj\ndet\nnmod\ncase\nroot\nBook me the ﬂight through Houston\n(b) System\nxcomp\nnsubj\ndet\nnmod\ncase\nroot\nFigure 19.15 Reference and system parses for Book me the ﬂight through Houston , resulting in an LAS of\n2/3 and an UAS of 5/6.\na development corpus. Here we can make use of the notions of precision and recall\nintroduced in Chapter 17, measuring the percentage of relations labeled NSUBJ by\nthe system that were correct (precision), and the percentage of the NSUBJ relations\npresent in the development set that were in fact discovered by the system (recall).\nWe can employ a confusion matrix to keep track of how often each dependency type\nwas confused for another.\n19.5 Summary\nThis chapter has introduced the co",
+                "cross-encoder similarity (%)": 0.38
+            },
+            "retrieval_5": {
+                "text": "20 CHAPTER 19 • D EPENDENCY PARSING\n19.3.3 A neural algorithm for assigning scores\nState-of-the-art graph-based multilingual parsers are based on neural networks. In-\nstead of extracting hand-designed features to represent each edge between words wi\nand w j, these parsers run the sentence through an encoder, and then pass the encoded\nrepresentation of the two words wi and w j through a network that estimates a score\nfor the edge i→ j.\nbook that ﬂight\nr1\nscore(h1\nhead, h3\ndep)\nBiaﬃne\nb\nENCODER\nU\nh1 head\nFFNhead\nFFNhead\nFFNdep\nFFNdep\nh1 dep\nFFNhead\nFFNdep\nh2 head h2 dep h3 head h3 dep\nW\nr2 r3\n∑\n+\nFigure 19.14 Computing scores for a single edge (book→ ﬂight) in the biafﬁne parser of\nDozat and Manning (2017); Dozat et al. (2017). The parser uses distinct feedforward net-\nworks to turn the enco",
+                "cross-encoder similarity (%)": 0.04
+            }
+        }
+    },
+    {
+        "question": "A report dated 2026-04-10 says an event happened yesterday. Using that dateline as the temporal anchor, what date should be extracted?",
+        "gold_answer": "Normalize yesterday to 2026-04-09. The anchor is the report’s dateline, not the day the extraction program runs.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "Compare “It is raining” with “Nora bought a bicycle. It is red.” Should both instances of it receive entity antecedents?",
+        "gold_answer": "No. Weather it is non-referential and needs no entity antecedent. In the second example, it refers to the bicycle.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "28 CHAPTER 23 • C OREFERENCE RESOLUTION AND ENTITY LINKING\n• The surface form of an entity mention is linked to its information status\n(new, old, or inferrable), and how accessible or salient the entity is.\n• Some NPs are not referring expressions, such as pleonastic it in It is raining.\n• Many corpora have human-labeled coreference annotations that can be used\nfor supervised learning, including OntoNotes for English, Chinese, and Ara-\nbic, ARRAU for English, and AnCora for Spanish and Catalan.\n• Mention detection can start with all nouns and named entities and then use\nanaphoricity classiﬁers or referentiality classiﬁers to ﬁlter out non-mentions.\n• Three common architectures for coreference aremention-pair, mention-rank,\nand entity-based, each of which can make use of feature-based or ne",
+                "cross-encoder similarity (%)": 0.39
+            },
+            "retrieval_2": {
+                "text": "ing example does not create a discourse referent:\n(23.20) Janet doesn’t have a car.\nand cannot be referred back to by anaphoric it or the car:\n(23.21) * It is a Toyota.\n(23.22) * The car is red.\nWe summarize here four common types of structures that are not counted as men-\ntions in coreference tasks and hence complicate the task of mention-detection:\n4 Pronouns also usually (but not always) refer to entities that were introduced no further than one or two\nsentences back in the ongoing discourse, whereas deﬁnite noun phrases can often refer further back.",
+                "cross-encoder similarity (%)": 0.03
+            },
+            "retrieval_3": {
+                "text": "4 CHAPTER 23 • C OREFERENCE RESOLUTION AND ENTITY LINKING\n23.1 Coreference Phenomena: Linguistic Background\nWe now offer some linguistic background on reference phenomena. We introduce\nthe four types of referring expressions (deﬁnite and indeﬁnite NPs, pronouns, and\nnames), describe how these are used to evoke and access entities in the discourse\nmodel, and talk about linguistic features of the anaphor/antecedent relation (like\nnumber/gender agreement, or properties of verb semantics).\n23.1.1 Types of Referring Expressions\nIndeﬁnite Noun Phrases: The most common form of indeﬁnite reference in En-\nglish is marked with the determiner a (or an), but it can also be marked by a quan-\ntiﬁer such as some or even the determiner this. Indeﬁnite reference generally intro-\nduces into the discourse co",
+                "cross-encoder similarity (%)": 0.01
+            },
+            "retrieval_4": {
+                "text": "r example Bean and Riloff\n(1999) learned patterns for characterizing anaphoric or non-anaphoric NPs; (by ex-\ntracting and generalizing over the ﬁrst NPs in a text, which are guaranteed to be\nnon-anaphoric). Chang et al. (2012) look for head nouns that appear frequently in\nthe training data but never appear as gold mentions to help ﬁnd non-referential NPs.\nBergsma et al. (2008) use web counts as a semisupervised way to augment standard\nfeatures for anaphoricity detection for Englishit, an important task becauseit is both\ncommon and ambiguous; between a quarter and half it examples are non-anaphoric.\nConsider the following two examples:\n(23.45) You can make [it] in advance. [anaphoric]\n(23.46) You can make [it] in Hollywood. [non-anaphoric]\nThe it in make it is non-anaphoric, part of the idi",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "implicit cause may be more\nsalient.\nSelectional Restrictions: Many other kinds of semantic knowledge can play a role\nin referent preference. For example, the selectional restrictions that a verb places on\nits arguments (Chapter 21) can help eliminate referents, as in (23.42).\n(23.42) I ate the soup in my new bowl after cooking it for hours\nThere are two possible referents forit, the soup and the bowl. The verbeat, however,\nrequires that its direct object denote something edible, and this constraint can rule\nout bowl as a possible referent.\n23.2 Coreference Tasks and Datasets\nWe can formulate the task of coreference resolution as follows: Given a text T , ﬁnd\nall entities and the coreference links between them. We evaluate our task by com-\nparing the links our system creates with those in",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Contrast token creation in BPE and audio vector quantization.",
+        "gold_answer": "BPE merges frequent adjacent text symbols. Audio vector quantization maps continuous speech vectors to codebook indices.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "4 CHAPTER 16 • T EXT-TO-SPEECH\ntrained to recreate the same audio waveform out, via an intermediate representation\nconsisting of discrete tokens created by vector quantization.\nAudio tokenizers have three stages:\n1. an encoder maps the acoustic waveform, a series ofT values x = x1, x2, ...,xT ,\nto a sequence of τ embeddings z = z1,z2, ...,zτ. τ is typically 100-1000 times\nsmaller than T .\n2. a vector quantizer that takes each embedding zt corresponding to part of the\nwaveform, and represents it by a sequence of discrete tokens each taken from\none of the Nc codebooks, qt = qt,1, qt,2, ...,qt,Nc. The vector quantizer also\nsums the vector codewords from each codebook to create a quantizer output\nvector zqt.\n3. a decoder that generates a lossy reconstructed waveform span ˆx from the\nquantizer",
+                "cross-encoder similarity (%)": 95.03
+            },
+            "retrieval_2": {
+                "text": "16.2 • U SING A CODEC TO LEARN DISCRETE AUDIO TOKENS 7\n16.2.3 Residual Vector Quantization\nIn practice, simple VQ doesn’t produce good enough reconstructions, at least not\nwith codebook sizes of 1024. 1024 codeword vectors just isn’t enough to represent\nthe wide variety of embeddings we get from encoding all possible speech wave-\nforms. So what the E NCODEC model (and many other audio tokenization methods)\nuse instead is a more sophisticated variant called residual vector quantization, orresidual vector\nquantization\nRVQ. In residual vector quantization, we use multiple codebooks arranged in a kindRVQ\nof hierarchy.\nFigure 2: The neural audio codec model revisit. Because RVQ is employed, the ﬁrst quantizer plays\nthe most important role in reconstruction, and the impact from others gradually",
+                "cross-encoder similarity (%)": 87.62
+            },
+            "retrieval_3": {
+                "text": "radigm, since language models do well at predicting\nsequences of discrete tokens.\nIn practice for the ENCODEC model and other audio tokenizers, we use a power-\nful form of vector quantization calledresidual vector quantizationthat we’ll deﬁne\nin the following section. But it will be helpful to ﬁrst see the basic VQ algorithm\nbefore we extend it.\nVector quantization has a training phase and an inference phase. We already\nintroduced the core of the basic VQ training algorithm when we described k-means\nclustering of vectors in Section ??, since k-means clustering is the most common\nalgorithm used to implement VQ. To review, in VQ training, we run a big set of\nspeech waveﬁles through an encoder to generate N vectors, each one corresponding\nto some frame of speech. Then we cluster all these N v",
+                "cross-encoder similarity (%)": 81.46
+            },
+            "retrieval_4": {
+                "text": "avector\nquantization\nVQ series of discrete symbols.\nHistorically vector quantization (Gray, 1984) was used to compress a speech\nsignal, to reduce the bit rate for transmission or storage. To compress a sequence\nof vector representations of speech, we turn each vector into an integer, an index\nrepresenting a class or cluster. Then instead of transmitting a big vector of ﬂoating\npoint numbers, we transmit that integer index. At the other end of the transmission,\nwe reconstitute the vector from the index.\nFor TTS and other modern speech applications we use vector quantization for a\ndifferent reason: because VQ conveniently creates discrete tokens, and those ﬁt well\ninto the language modeling paradigm, since language models do well at predicting\nsequences of discrete tokens.\nIn practice for th",
+                "cross-encoder similarity (%)": 34.37
+            },
+            "retrieval_5": {
+                "text": "2.4 • S UBWORD TOKENIZATION : B YTE -PAIR ENCODING 11\n(ULM) (Kudo, 2018).2 In this section we introduce the byte-pair encoding or BPEBPE\nalgorithm (Sennrich et al., 2016; Gage, 1994); see Fig. 2.6.\nLike most tokenization schemes, the BPE algorithm has two parts: a trainer,\nand an encoder. In general in the token training phase we take a raw training corpus\n(usually roughly pre-separated into words, for example by whitespace) and induce\na vocabulary, a set of tokens. Then a token encoder takes a raw test sentence and\nencodes it into the tokens in the vocabulary that were learned in training.\n2.4.1 BPE training\nThe BPE training algorithm iteratively merges frequent neighboring tokens to create\nlonger and longer tokens. The algorithm begins with a vocabulary that is just the\nset of all indivi",
+                "cross-encoder similarity (%)": 23.65
+            }
+        }
+    },
+    {
+        "question": "An optimal word alignment has S=2, D=1, I=3 and 4 reference words. Find WER. Can it exceed 100%?",
+        "gold_answer": "WER = (2+1+3)/4 = 150%. It is word-level edit cost normalized by reference length; insertions allow values above 100%.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "or Rate = 100× Insertions + Substitutions + Deletions\nTotal Words in Correct Transcript\nHere is a samplealignment between a reference and a hypothesis utterance fromalignment\nthe CallHome corpus, showing the counts used to compute the error rate:\nREF: i *** ** UM the PHONE IS i LEFT THE portable **** PHONE UPSTAIRS last night\nHYP: i GOT IT TO the ***** FULLEST i LOVE TO portable FORM OF STORES last night\nEval: I I S D S S S I S S\nThis utterance has six substitutions, three insertions, and one deletion:\nWord Error Rate = 1006 + 3 + 1\n13 = 76.9%\nThe standard method for computing word error rates is a free script calledsclite,\navailable from the National Institute of Standards and Technologies (NIST) (NIST,\n2005). Sclite is given a series of reference (hand-transcribed, gold-standard) sen-\nte",
+                "cross-encoder similarity (%)": 1.97
+            },
+            "retrieval_2": {
+                "text": "15.6 • ASR E VALUATION : W ORD ERROR RATE 23\n4. Normalize non-standard-words (number, quantities, dates, times) [e.g., “$100\n→ “One hundred dollars”]\n5. Unify US and UK spelling conventions\nStatistical signiﬁcance for ASR: MAPSSWE or MacNemar\nAs with other language processing algorithms, we need to know whether a particular\nimprovement in word error rate is signiﬁcant or not.\nThe standard statistical tests for determining if two word error rates are different\nis the Matched-Pair Sentence Segment Word Error (MAPSSWE) test, introduced in\nGillick and Cox (1989).\nThe MAPSSWE test is a parametric test that looks at the difference between\nthe number of word errors the two systems produce, averaged across a number of\nsegments. The segments may be quite short or as long as an entire utterance; in",
+                "cross-encoder similarity (%)": 0.03
+            },
+            "retrieval_3": {
+                "text": "rorword error\nrate. The word error rate is based on how much the word string returned by the\nrecognizer (the hypothesized word string) differs from a reference transcription.\nThe ﬁrst step in computing word error is to compute the minimum edit distance in",
+                "cross-encoder similarity (%)": 0.02
+            },
+            "retrieval_4": {
+                "text": "(NIST) (NIST,\n2005). Sclite is given a series of reference (hand-transcribed, gold-standard) sen-\ntences and a matching set of hypothesis sentences. Besides performing alignments,\nand computing word error rate, sclite performs a number of other useful tasks. For\nexample, for error analysis it gives useful information such as confusion matrices\nshowing which words are often misrecognized for others, and summarizes statistics\nof words that are often inserted or deleted. sclite also gives error rates by speaker\n(if sentences are labeled for speaker ID), as well as useful statistics like thesentence\nerror rate, the percentage of sentences with at least one word error.Sentence error\nrate\nText normalization before evaluation\nIt’s normal for systems to normalize text before computing word error r",
+                "cross-encoder similarity (%)": 0.02
+            },
+            "retrieval_5": {
+                "text": "24 CHAPTER 15 • A UTOMATIC SPEECH RECOGNITION\n2∗ P(Z≥| w|)≤ 0.05 (two-tailed) or P(Z≥| w|)≤ 0.05 (one-tailed), where Z is\nstandard normal and w is the realized value W; these probabilities can be looked up\nin the standard tables of the normal distribution.\nEarlier work sometimes used McNemar’s testfor signiﬁcance, but McNemar’sMcNemar’s test\nis only applicable when the errors made by the system are independent, which is not\ntrue in continuous speech recognition, where errors made on a word are extremely\ndependent on errors made on neighboring words.\nCould we improve on word error rate as a metric? It would be nice, for exam-\nple, to have something that didn’t give equal weight to every word, perhaps valuing\ncontent words like Tuesday more than function words likea or of. While researchers",
+                "cross-encoder similarity (%)": 0.01
+            }
+        }
+    },
+    {
+        "question": "Why might dense retrieval find paraphrases missed by exact term matching, and how does unit normalization affect dot-product scoring?",
+        "gold_answer": "Learned embeddings can match semantically related wording despite lexical mismatch. Normalizing nonzero query and document vectors to unit length makes their dot product equal cosine similarity.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "HISTORICAL NOTES 21\n• The inverted index is a storage mechanism for sparse retrieval that makes it\nvery efﬁcient to ﬁnd documents that have a particular word.\n• In dense retrieval techniques, documents or queries are instead represented as\nembeddings (dense vectors) computed by a language model (whether encoder-\nonly models like the BERT family, or decoder-only). Document-query simi-\nlarity is computed as dot product or cosine in they embedding space.\n• For dense retrieval, FAISS is an approximate nearest neighbor vector search\nalgorithm that makes it very efﬁcient to ﬁnd the k most similar document\nembeddings to a query embedding, making it quick to do ranking.\n• Ranked retrieval is generally evaluated by mean average precision or inter-\npolated precision.\n• Retrieval can be incorporated",
+                "cross-encoder similarity (%)": 4.2
+            },
+            "retrieval_2": {
+                "text": "14 CHAPTER 11 • R ETRIEVAL -BASED MODELS\nQuery Document\n…\n…\n…\n…\n…\n…\n[sep]\ns(q,d)\nzCLS\nU\nQuery\nzCLS_Q zCLS_D\nDocument\n…\n…\n…\n…\n…\n…\n•\ns(q,d)\n(a) (b)\nFigure 11.11 Two ways to do dense retrieval, illustrated by using lines between layers to schematically rep-\nresent self-attention: (a) Use a single encoder to jointly encode query and document and ﬁnetune to produce a\nrelevance score with a linear layer over the CLS token. This is too compute-expensive to use except in rescoring\n(b) Use separate encoders for query and document, and use the dot product between CLS token outputs for the\nquery and document as the score. This is less compute-expensive, but not as accurate.\nble meaning interactions between all the tokens in the query and the tokens in the\ndocument.\nThere are numerous approaches that",
+                "cross-encoder similarity (%)": 1.61
+            },
+            "retrieval_3": {
+                "text": "11.3 • I NFORMATION RETRIEVAL WITH DENSE VECTORS 13\n11.3 Information Retrieval with Dense Vectors\nThe classic tf-idf or BM25 algorithms for IR have long been known to have a con-\nceptual ﬂaw: they work only if there is exact overlap of words between the query\nand document. In other words, the user posing a query (or asking a question) needs\nto guess exactly what words the writer of the answer might have used, an issue called\nthe vocabulary mismatch problem (Furnas et al., 1987).\nThe solution to this problem is to use an approach that can handle synonymy:\ninstead of (sparse) word-count vectors, using (dense) embeddings. This idea was\nﬁrst proposed for retrieval in the last century under the name of Latent Semantic\nIndexing approach (Deerwester et al., 1990), but is implemented in modern tim",
+                "cross-encoder similarity (%)": 1.06
+            },
+            "retrieval_4": {
+                "text": "obabilities.\n• Whether using sparse or dense vectors, word and document similarities are\ncomputed by some function of the dot product between vectors. The cosine\nof two vectors—a normalized dot product—is the most popular such metric.\nHistorical Notes\nThe idea of vector semantics arose out of research in the 1950s in three distinct\nﬁelds: linguistics, psychology, and computer science, each of which contributed a\nfundamental aspect of the model.\nThe idea that meaning is related to the distribution of words in context was\nwidespread in linguistic theory of the 1950s, among distributionalists like Zellig\nHarris, Martin Joos, and J. R. Firth, and semioticians like Thomas Sebeok. As Joos\n(1950) put it,\nthe linguist’s “meaning” of a morpheme. . . is by deﬁnition the set of conditional\nprobabilit",
+                "cross-encoder similarity (%)": 0.31
+            },
+            "retrieval_5": {
+                "text": "pace possibly helps with generalization and avoid-\ning overﬁtting. Dense vectors may also do a better job of capturing synonymy.\nFor example, in a sparse vector representation, dimensions for synonyms like car\nand automobile dimension are distinct and unrelated; sparse vectors may thus fail\nto capture the similarity between a word with car as a neighbor and a word with\nautomobile as a neighbor.\nIn this section we introduce one method for computing embeddings: skip-gramskip-gram\nwith negative sampling, sometimes called SGNS. The skip-gram algorithm is oneSGNS\nof two algorithms in a software package called word2vec, and so sometimes theword2vec\nalgorithm is loosely referred to as word2vec (Mikolov et al. 2013a, Mikolov et al.\n2013b). The word2vec methods are fast, efﬁcient to train, and easi",
+                "cross-encoder similarity (%)": 0.01
+            }
+        }
+    },
+    {
+        "question": "How does a log-mel feature vector differ from an audio-codebook token?",
+        "gold_answer": "Log-mel features summarize spectral energy in perceptually spaced bands. An audio-codebook token is a discrete index representing a quantized speech vector.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "14.5 • F EATURE EXTRACTION FOR SPEECH RECOGNITION : L OG MEL SPECTRUM 21\nture vectors, each vector representing the information in a small time window offeature vector\nthe signal. Sometimes speech recognition or processing algorithms will start with\nthe waveform, in which case that processing is done by the convolutional networks\n(convnets) that we will introduce in Chapter 15.\nOther systems begin instead at a higher level, with the log mel spectrum. So in\nthis section we introduce this commonly used feature vector: sequences of log mel\nspectrum vectors. In the following section we’ll introduce an alternative vector, the\nMFCC representation. We’ll introduce these concepts at a relatively high level; a\nspeech signal processing course is recommended for more details.\nWe begin by repeating fr",
+                "cross-encoder similarity (%)": 39.81
+            },
+            "retrieval_2": {
+                "text": "We call each scalar output from a particular ﬁlter a channel, and so the outputchannel\nfor each input frame from the ﬁlterbank is a vector of, say 80 or 128 channels, each\nof which represents the log energy of a particular (mel-spaced) frequency band.\nBefore we send this log mel channel vector to the downstream neural network\nlayers, it’s common for speech systems to rescale them so they have comparable\nranges. A common type of normalization for speech is to scale the input to be be-\ntween -1 and 1 with zero mean across the entire pretraining dataset (see Section ??\nin Chapter 4).\n14.6 MFCC: Mel Frequency Cepstral Coefﬁcients\nThe MFCC, mel frequency cepstral coefﬁcients , is a useful representation of theMFCC\nwaveform that emphasizes aspects of the signal that are relevant for detection of",
+                "cross-encoder similarity (%)": 19.54
+            },
+            "retrieval_3": {
+                "text": "16.2 • U SING A CODEC TO LEARN DISCRETE AUDIO TOKENS 3\nscribe in the next section. Codecs have three parts: an encoder (that turns\nspeech into embedding vectors), a quantizer (that turns the embeddings into\ndiscrete tokens) and decoders (that turns the discrete tokens back into speech).\n2. The 2-stage conditional language model that can generate audio tokens cor-\nresponding to the desired text. We’ll sketch this in Section 16.3.\n16.2 Using a codec to learn discrete audio tokens\nModern TTS systems are based around converting the waveform into a sequence of\ndiscrete audio tokens. This idea of manipulating discrete audio tokens is also useful\nfor other speech-enabled systems like spoken language models , which take text\nor speech input and can generate text or speech output to solve tasks lik",
+                "cross-encoder similarity (%)": 10.92
+            },
+            "retrieval_4": {
+                "text": "e models , which take text\nor speech input and can generate text or speech output to solve tasks like speech-\nto-speech translation, diarization, or spoken question answering. Having discrete\ntokens means that we can make use of language model technology, since language\nmodels are specialized for sequences of discrete tokens. Audio tokenizers are thus\nan important component of the modern speech toolkit.\nThe standard way to learn audio tokens is from a neural audio codec (the wordcodec\nis formed from coder/decoder). Historically a codec was a hardware device that\ndigitized analog symbols. More generally we use the word to mean a mechanism\nfor encoding analog speech signals into a digitized compressed representation that\ncan be efﬁciently stored and sent. Codecs are still used for compressio",
+                "cross-encoder similarity (%)": 5.88
+            },
+            "retrieval_5": {
+                "text": "mel spectrum.\nm1 m2 mM...mel spectrum\n0 77000\n0.5\n1Amplitude\nFrequency (Hz)8K\nFigure 14.29 The mel ﬁlter bank (Davis and Mermelstein, 1980). Each triangular ﬁlter,\nspaced logarithmically along the mel scale, collects energy from a given frequency range.\nFinally, we take the log of each of the mel spectrum values. The human response\nto signal level is logarithmic (like the human response to frequency). Humans are\nless sensitive to slight differences in amplitude at high amplitudes than at low ampli-\ntudes. In addition, using a log makes the feature estimates less sensitive to variations\nin input such as power variations due to the speaker’s mouth moving closer or further\nfrom the microphone.\nWe call each scalar output from a particular ﬁlter a channel, and so the outputchannel\nfor each inpu",
+                "cross-encoder similarity (%)": 5.13
+            }
+        }
+    },
+    {
+        "question": "For “Maya opened the door” and “The door was opened by Maya,” distinguish a constituency description from semantic roles.",
+        "gold_answer": "Constituency describes phrase structure, which changes between the two forms. Semantic roles preserve Maya as agent and the door as theme despite the change of grammatical subject.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "Does positive lexicon-based sentiment establish discourse coherence?",
+        "gold_answer": "No. Sentiment summarizes affective word cues; coherence concerns relations and continuity across discourse. A positive word inventory alone does not establish those connections.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "Would it assign bank the same vector in both?",
+        "gold_answer": "Generally no. BERT computes contextual representations, so the financial and riverside uses can receive different vectors.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "ries), contex-\ntual embeddings represent the meaning of word instances: instances of a particular\nword type in a particular context. Thus where word2vec had a single vector for each\nword type, contextual embeddings provide a single vector for each instance of that\nword type in its sentential context. Contextual embeddings can thus be used for\ntasks like measuring the semantic similarity of two words in context, and are useful\nin linguistic tasks that require models of word meaning.\n10.3.1 Contextual Embeddings and Word Sense\nWords are ambiguous: the same word can be used to mean different things. Inambiguous\nChapter 5 we saw that the word “mouse” can mean (1) a small rodent, or (2) a hand-\noperated device to control a cursor. The word “bank” can mean: (1) a ﬁnancial\ninstitution or (2) a sl",
+                "cross-encoder similarity (%)": 0.28
+            },
+            "retrieval_2": {
+                "text": "ument vectors as the score for each candidate document (Fig. 11.11b). For\nexample, if we used BERT, we would have two encoders BERT Q and BERTD and\nwe could represent the query and document as the [CLS] token of the respective\nencoders (Karpukhin et al., 2020):\nzq = BERTQ(q)[CLS]\nzd = BERTD(d)[CLS]\nscore(q,d) = zq· zd (11.18)\nThe bi-encoder is much cheaper than a full query/document encoder, but is also\nless accurate, since its relevance decision can’t take full advantage of all the possi-",
+                "cross-encoder similarity (%)": 0.02
+            },
+            "retrieval_3": {
+                "text": "dels like BERT, each wordw will be represented by a different\nvector each time it appears in a different context. While the causal language models\nof Chapter 8 also use contextual embeddings, the embeddings created by masked\nlanguage models seem to function particularly well as representations.\n10.1 Bidirectional Transformer Encoders\nLet’s begin by introducing the bidirectional transformer encoder that underlies mod-\nels like BERT and its descendants like RoBERTa (Liu et al., 2019) or SpanBERT\n(Joshi et al., 2020). In Chapter 7 we introduced the idea of left-to-right language\nmodels that can be applied to autoregressive contextual generation problems like\nquestion answering or summarization, and in Chapter 8 we saw how to implement\nlanguage models with causal (left-to-right) transformers.",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_4": {
+                "text": "e use is BERT, which tokenizes the input text into a sequence\nof word pieces (Wu et al., 2016), where unknown words are split into several commonly observed\nsequences of characters. The representation for each word piece is computed with a Transformer\nencoder (V aswani et al., 2017) by repeatedly applying self-attention and nonlinear transformations\nin an alternating fashion. BERT embeddings have been shown to beneﬁt various NLP tasks (Devlin\net al., 2019; Liu, 2019; Huang et al., 2019; Y ang et al., 2019a).\nSimilarity Measure The vector representation allows for a soft measure of similarity instead of\nexact-string (Papineni et al., 2002) or heuristic (Banerjee & Lavie, 2005) matching. The cosine\nsimilarity of a reference token xi and a candidate token ˆxj is x>\ni ˆxj\nkxi kkˆxj k . We use",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "ween all the tokens in the query and the tokens in the\ndocument.\nThere are numerous approaches that lie in between the full encoder and the bi-\nencoder. One intermediate alternative is to use cheaper methods (like BM25) as the\nﬁrst pass relevance ranking for each document, take the top N ranked documents,\nand use expensive methods like the full BERT scoring to rerank only the top N\ndocuments rather than the whole set.\nAnother intermediate approach is the ColBERT approach of Khattab and Za-ColBERT\nharia (2020) and Khattab et al. (2021), shown in Fig. 11.12. This method separately\nencodes the query and document, but rather than encoding the entire query or doc-\nument into one vector, it separately encodes each of them into contextual represen-\ntations for each token. These BERT representatio",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Why could shuffling them change its score?",
+        "gold_answer": "Shuffling sentences changes adjacent entity-role transitions. Those transition patterns contribute features to the coherence score, even when the words remain unchanged.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "nstead of having a top-down theory, the entity-grid\nmodel using machine learning to induce the patterns of entity mentioning that make\na discourse more coherent.\nThe model is based around an entity grid, a two-dimensional array that repre-\nsents the distribution of entity mentions across sentences. The rows represent sen-\ntences, and the columns represent discourse entities (most versions of the entity grid\nmodel focus just on nominal mentions). Each cell represents the possible appearance\nof an entity in a sentence, and the values represent whether the entity appears and its\ngrammatical role. Grammatical roles are subject ( S), object ( O), neither ( X), or ab-\nsent (–); in the implementation of Barzilay and Lapata (2008), subjects of passives\nare represented with O, leading to a represen",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_2": {
+                "text": "rgument in each sentence (Biran\nand McKeown, 2015).\n24.3 Centering and Entity-Based Coherence\nA second way a discourse can be coherent is by virtue of being “about” some entity.\nThis idea that at each point in the discourse some entity is salient, and a discourse\nis coherent by continuing to discuss the same entity, appears early in functional lin-\nguistics and the psychology of discourse (Chafe 1976, Kintsch and Van Dijk 1978),\nand soon made its way to computational models. In this section we introduce two\nmodels of this kind of entity-based coherence: Centering Theory (Grosz et al.,entity-based\n1995), and the entity grid model of Barzilay and Lapata (2008).\n24.3.1 Centering\nCentering Theory (Grosz et al., 1995) is a theory of both discourse salience andCentering\nTheory\ndiscourse coherenc",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_3": {
+                "text": "nt entities are more likely to be\npronominalized or to appear in prominent syntactic positions like subject or object).\nIn Centering Theory, transitions between sentences that maintain the same salient\nentity are considered more coherent than ones that repeatedly shift between entities.\nThe entity grid model of coherence (Barzilay and Lapata, 2008) is a commonlyentity grid\nused model that realizes some of the intuitions of the Centering Theory framework.\nEntity-based coherence is introduced in Section 24.3.\nFinally, discourses can be locally coherent by being topically coherent: nearbytopically\ncoherent\nsentences are generally about the same topic and use the same or similar vocab-\nulary to discuss these topics. Because topically coherent discourses draw from a\nsingle semantic ﬁeld or topi",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_4": {
+                "text": "14 CHAPTER 24 • D ISCOURSE COHERENCE\na modiﬁed order (such as a randomized order). We turn to these evaluations in the\nnext section.\n24.3.3 Evaluating Neural and Entity-based coherence\nEntity-based coherence models, as well as the neural models we introduce in the\nnext section, are generally evaluated in one of two ways.\nFirst, we can have humans rate the coherence of a document and train a classiﬁer\nto predict these human ratings, which can be categorial (high/low, or high/mid/low)\nor continuous. This is the best evaluation to use if we have some end task in mind,\nlike essay grading, where human raters are the correct deﬁnition of the ﬁnal label.\nAlternatively, since it’s very expensive to get human labels, and we might not\nyet have an end-task in mind, we can use natural texts to do self",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "20 CHAPTER 24 • D ISCOURSE COHERENCE\ndiscourse entities, and hence how coherence is achieved by virtue of keeping\nthe same discourse entities salient over the discourse. The entity grid model\ngives a more bottom-up way to compute which entity realization transitions\nlead to coherence.\n• Many different genres have different types of global coherence. Persuasive\nessays have claims and premises that are extracted in the ﬁeld of argument\nmining, scientiﬁc articles have structure related to aims, methods, results, and\ncomparisons.\nHistorical Notes\nCoherence relations arose from the independent development of a number of schol-\nars, including Hobbs (1979) idea that coherence relations play an inferential role for\nthe hearer, and the investigations by Mann and Thompson (1987) of the discourse\nstr",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Which embedding model and chunk size are configured in my deployed RAG application?",
+        "gold_answer": "The chapters do not contain your deployment configuration. Provide the relevant configuration to identify the embedding model and chunk size.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "11.4 • R ETRIEVAL -AUGMENTED GENERATION (RAG) 17\n2. Create a prompt that includes q and the retrieved passages\n3. Call an LLM with the prompt\nThe resulting prompts might look something like:\nSchematic of a RAG Prompt\nretrieved passage 1\nretrieved passage 2\n...\nretrieved passage k\nBased on these texts, answer this question: What year\nwas the premiere of The Magic Flute ?\nThe task for the language model is then to generate text according to this proba-\nbility model:\np(x1, . . . ,xn) =\nn∏\ni=1\np(xi|R(q) ; Answer the following question... ; q ;x<i)\nThere are many augmentations of this basic RAG paradigm. One addition is\nthe use of agent-based RAG. In the RAG paradigm described so far, a search is\nalways run and then retrieved passages are combined with the user’s question in a\nprompt. But in ac",
+                "cross-encoder similarity (%)": 0.45
+            },
+            "retrieval_2": {
+                "text": "16 CHAPTER 11 • R ETRIEVAL -BASED MODELS\n11.4 Retrieval-Augmented Generation (RAG)\nThe information retrieval techniques we introduced in the prior section can be inte-\ngrated into language models via a method called retrieval-augmented generation\nor RAG. In the basic RAG scenario that we will describe in this section, we use IR\ntechniques to retrieve documents from some speciﬁed store of documents that are\nlikely to have useful information. Then we use a large language model to generate\nan answer conditioned on these documents in addition to the original query.\nAs we summarized in the introduction to the chapter, there are many goals of\nretrieval-augmented generation. RAG can help mitigate hallucination, by giving\nthe model a set of trusted documents. RAG can also help language models gen-",
+                "cross-encoder similarity (%)": 0.21
+            },
+            "retrieval_3": {
+                "text": "nterested.\nIn the ﬁrst stage of the retrieval-augmented generation, or RAG model shown\nretrieval-\naugmented\ngeneration\nRAG in Fig. 11.13 we retrieve relevant passages from some prespeciﬁed text collection,\nfor example using the dense retrievers of the previous section. In the second gen-\nerate stage, we take the set of retrieved passages, integrate it with the user prompt,\nand pass some version of these to a large language model to generate an answer\nconditioned on these two things.\nFor example imagine the user asks the questionWhat year was the premiere\nof The Magic Flute ?. We pass this question to a dense retriever and return a se-\nries of passages about The Magic Flute.\nThe idea of retrieval-augmented generation is to condition on the retrieved pas-\nsages, jointly with some prompt text",
+                "cross-encoder similarity (%)": 0.09
+            },
+            "retrieval_4": {
+                "text": "allucination, by giving\nthe model a set of trusted documents. RAG can also help language models gen-\nerate factual text about proprietary data, like personal email, or health records, or\ncompany-internal documents, or other legal documents. RAG can also help with\nthe problem that knowledge is dynamic and time-sensitive, for example if we know\nthe user’s information need references data from a time after a language model was\ntrained.\nA RAG system is based on two major components: the retriever and the gener-\nator, (the latter is sometimes called, for historical reasons, the reader (Chen et al.,\n2017)). Fig. 11.13 sketches out this standard model for answering questions.\nWhen was\nthe premiere of\nThe Magic Flute?\nRelevant\nDocs\n1791, according \nto this page\nRetriever\nIndexed Docs\nLLM\nGenerator",
+                "cross-encoder similarity (%)": 0.06
+            },
+            "retrieval_5": {
+                "text": "Instead documents are broken up into smaller passages, such\nas non-overlapping ﬁxed-length chunks of say 100 tokens, and the retriever encodes\nand retrieves these passages rather than entire documents. The query and document\nhave to be made to ﬁt in the BERT 512-token window, for example by truncating\nthe query to 64 tokens and truncating the document if necessary so that it, the query,\n[CLS], and [SEP] ﬁt in 512 tokens. The BERT system together with the linear layer\nU can then be ﬁne-tuned for the relevance task by gathering a tuning dataset of\nrelevant and non-relevant passages.\nThe problem with the full BERT architecture in Fig. 11.11a is the expense in\ncomputation and time. With this architecture, every time we get a query, we have to\npass every single document in our entire collection",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "What Recall@5 did my retriever achieve on its latest evaluation run?",
+        "gold_answer": "The evaluation result is not provided. Supply the retrieved results and relevance labels, or the evaluation report, to determine Recall@5.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "always run and then retrieved passages are combined with the user’s question in a\nprompt. But in actual applications, we may not want to run retrieval for every user\nturn. Or we may want to retrieve from different collections for different user needs\n(sometimes the web, other times a private collection). In agent-based RAG, the\nsystem decides when to call a retrieval agent and for which collection.\nAnother research area has to do with the relationship between the retriever and\nthe generator. For example there may be noise in the retrieved passages; some of\nthem may be irrelevant or wrong, or in an unhelpful order. How can we encourage\nthe LLM to focus on the good passages? Some RAG architectures add a reranker\nthat reranks or reorders passages after they are retrieved. Or some complex que",
+                "cross-encoder similarity (%)": 0.01
+            },
+            "retrieval_2": {
+                "text": "nterested.\nIn the ﬁrst stage of the retrieval-augmented generation, or RAG model shown\nretrieval-\naugmented\ngeneration\nRAG in Fig. 11.13 we retrieve relevant passages from some prespeciﬁed text collection,\nfor example using the dense retrievers of the previous section. In the second gen-\nerate stage, we take the set of retrieved passages, integrate it with the user prompt,\nand pass some version of these to a large language model to generate an answer\nconditioned on these two things.\nFor example imagine the user asks the questionWhat year was the premiere\nof The Magic Flute ?. We pass this question to a dense retriever and return a se-\nries of passages about The Magic Flute.\nThe idea of retrieval-augmented generation is to condition on the retrieved pas-\nsages, jointly with some prompt text",
+                "cross-encoder similarity (%)": 0.01
+            },
+            "retrieval_3": {
+                "text": "11.4 • R ETRIEVAL -AUGMENTED GENERATION (RAG) 17\n2. Create a prompt that includes q and the retrieved passages\n3. Call an LLM with the prompt\nThe resulting prompts might look something like:\nSchematic of a RAG Prompt\nretrieved passage 1\nretrieved passage 2\n...\nretrieved passage k\nBased on these texts, answer this question: What year\nwas the premiere of The Magic Flute ?\nThe task for the language model is then to generate text according to this proba-\nbility model:\np(x1, . . . ,xn) =\nn∏\ni=1\np(xi|R(q) ; Answer the following question... ; q ;x<i)\nThere are many augmentations of this basic RAG paradigm. One addition is\nthe use of agent-based RAG. In the RAG paradigm described so far, a search is\nalways run and then retrieved passages are combined with the user’s question in a\nprompt. But in ac",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_4": {
+                "text": "eval-augmented generation is to condition on the retrieved pas-\nsages, jointly with some prompt text, for example like “Based on these texts, answer\nthis question:”. Thus given a document collection D and a user query q, the most\nbasic RAG algorithm is:\n1. Call a retriever to return R(q) = d1··· dk, the top-k relevant passages from D",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "16 CHAPTER 11 • R ETRIEVAL -BASED MODELS\n11.4 Retrieval-Augmented Generation (RAG)\nThe information retrieval techniques we introduced in the prior section can be inte-\ngrated into language models via a method called retrieval-augmented generation\nor RAG. In the basic RAG scenario that we will describe in this section, we use IR\ntechniques to retrieve documents from some speciﬁed store of documents that are\nlikely to have useful information. Then we use a large language model to generate\nan answer conditioned on these documents in addition to the original query.\nAs we summarized in the introduction to the chapter, there are many goals of\nretrieval-augmented generation. RAG can help mitigate hallucination, by giving\nthe model a set of trusted documents. RAG can also help language models gen-",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Exactly how many tokens does my custom tokenizer AcornTokenizer-v1 produce for neuroretrieval?",
+        "gold_answer": "That count cannot be determined from the chapters. Provide the tokenizer configuration, vocabulary and merge rules, or its actual encoding output.",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "The visualization shows colors to separate out words, but of course the true out-\nput of the tokenizer is simply a sequence of unique token ids. (In case you’re in-\nterested, they were the following 13 tokens: 11865, 8923, 11, 31211, 6177, 23919,\n885, 220, 19427, 7633, 18887, 147065, 0)\nNotice that most words are their own token, usually including the leading space.\nClitics like ’s are segmented off when they appear on proper nouns like Jane, but\nare counted as part of a word for frequent words like she’s. Numbers tend to be\nsegmented into chunks of 3 digits. And some words (like anyhow) are segmented\ndifferently if they appear capitalized sentence-initially (two tokens, Any and how),\nthen if they appear after a space, lower case (one tokenanyhow).",
+                "cross-encoder similarity (%)": 0.94
+            }
+        }
+    },
+    {
+        "question": "On what exact date will the authors release a completed Chapter 12?",
+        "gold_answer": "The supplied chapter set does not establish a release date for a completed Chapter 12. I cannot give a supported date from these sources.",
+        "retrieved_chunks": {}
+    },
+    {
+        "question": "What is the best value of k?",
+        "gold_answer": "Which k do you mean—for example, the sampling cutoff, beam width, or retrieval setting—and what task or objective are you optimizing?",
+        "retrieved_chunks": {
+            "retrieval_1": {
+                "text": "4.11 • S TATISTICAL SIGNIFICANCE TESTING 25\nand in general decide what the best model is. Once we come up with what we think\nis the best model, we run it on the (hitherto unseen) test set to report its performance.\nWhile the use of a devset avoids overﬁtting the test set, having a ﬁxed train-\ning set, devset, and test set creates another problem: in order to save lots of data\nfor training, the test set (or devset) might not be large enough to be representative.\nWouldn’t it be better if we could somehow use all our data for training and still use\nall our data for test? We can do this by cross-validation.cross-validation\nIn cross-validation, we choose a number k, and partition our data into k disjoint\nsubsets called folds. Now we choose one of those k folds as a test set, train ourfolds\nclas",
+                "cross-encoder similarity (%)": 1.04
+            },
+            "retrieval_2": {
+                "text": "disjoint\nsubsets called folds. Now we choose one of those k folds as a test set, train ourfolds\nclassiﬁer on the remaining k− 1 folds, and then compute the error rate on the test\nset. Then we repeat with another fold as the test set, again training on the otherk−1\nfolds. We do this sampling process k times and average the test set error rate from\nthese k runs to get an average error rate. If we choose k = 10, we would train 10\ndifferent models (each on 90% of our data), test the model 10 times, and average\nthese 10 values. This is called 10-fold cross-validation.10-fold\ncross-validation\nThe only problem with cross-validation is that because all the data is used for\ntesting, we need the whole corpus to be blind; we can’t examine any of the data\nto suggest possible features and in general se",
+                "cross-encoder similarity (%)": 0.09
+            },
+            "retrieval_3": {
+                "text": "hever language model assigns a higher probability to the test set—which\nmeans it more accurately predicts the test set—is a better model. Given two proba-\nbilistic models, the better model is the one that better predicts the details of the test\ndata, and hence will assign a higher probability to the test data.\nSince our evaluation metric is based on test set probability, it’s important not\nto let the test sentences into the training set. Suppose we are trying to compute\nthe probability of a particular “test” sentence. If our test sentence is part of the\ntraining corpus, we will mistakenly assign it an artiﬁcially high probability when\nit occurs in the test set. We call this situation training on the test set or also data\ncontamination. Training on the test set introduces a bias that makes",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_4": {
+                "text": "models and for the more so-\nphisticated neural large language models of Chapter 8.\nIn order to evaluate any machine learning model, we need to have at least three\ndistinct datasets: the training set, the development set, and the test set.training set\ndevelopment\nset\ntest set",
+                "cross-encoder similarity (%)": 0.0
+            },
+            "retrieval_5": {
+                "text": "22 CHAPTER 7 • L ARGE LANGUAGE MODELS\nsizes. Big models also use more energy, and we prefer models that use less energy,\nboth to reduce the environmental impact of the model and to reduce the ﬁnancial\ncost of building or deploying it. We can target our evaluation to these factors by\nmeasuring performance normalized to a given compute or memory budget. We can\nalso directly measure the energy usage of our model in kWh or in kilograms of CO2\nemitted (Strubell et al., 2019; Henderson et al., 2020; Liang et al., 2023).\nAnother feature that a language model evaluation can measure is fairness. We\nknow that language models are biased, exhibiting gendered and racial stereotypes,\nor decreased performance for language from or about certain demographics groups.\nThere are language model evaluation benc",
+                "cross-encoder similarity (%)": 0.0
+            }
+        }
+    },
+    {
+        "question": "Which meaning of bank is intended?",
+        "gold_answer": "Please provide the sentence or surrounding context. Bank has multiple meanings, so the intended sense cannot be selected from the word alone.",
+        "retrieved_chunks": {}
+    }
+]
