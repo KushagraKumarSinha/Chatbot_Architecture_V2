@@ -1,0 +1,628 @@
+{
+  "evaluation_metadata": {
+    "total_evaluated_records": 50,
+    "overall_passed_records": 44,
+    "overall_failed_records": 6,
+    "overall_pass_rate": 0.88,
+    "mean_evaluation_score": 0.891
+  },
+  "category_performance_summary": {
+    "foundational": {
+      "total_items": 24,
+      "passed_items": 23,
+      "failed_items": 1,
+      "pass_rate": 0.9583,
+      "mean_score": 0.9479
+    },
+    "applied": {
+      "total_items": 12,
+      "passed_items": 10,
+      "failed_items": 2,
+      "pass_rate": 0.8333,
+      "mean_score": 0.8667
+    },
+    "cross_chapter": {
+      "total_items": 6,
+      "passed_items": 5,
+      "failed_items": 1,
+      "pass_rate": 0.8333,
+      "mean_score": 0.9000
+    },
+    "conversational": {
+      "total_items": 2,
+      "passed_items": 2,
+      "failed_items": 0,
+      "pass_rate": 1.0000,
+      "mean_score": 1.0000
+    },
+    "abstention": {
+      "total_items": 4,
+      "passed_items": 3,
+      "failed_items": 1,
+      "pass_rate": 0.7500,
+      "mean_score": 0.7500
+    },
+    "clarification": {
+      "total_items": 2,
+      "passed_items": 1,
+      "failed_items": 1,
+      "pass_rate": 0.5000,
+      "mean_score": 0.5000
+    }
+  },
+  "difficulty_performance_summary": {
+    "easy": {
+      "total_items": 7,
+      "passed_items": 7,
+      "failed_items": 0,
+      "pass_rate": 1.0000,
+      "mean_score": 1.0000
+    },
+    "medium": {
+      "total_items": 35,
+      "passed_items": 30,
+      "failed_items": 5,
+      "pass_rate": 0.8571,
+      "mean_score": 0.8614
+    },
+    "hard": {
+      "total_items": 8,
+      "passed_items": 7,
+      "failed_items": 1,
+      "pass_rate": 0.8750,
+      "mean_score": 0.9250
+    }
+  },
+  "item_level_judgments": [
+    {
+      "item_id": 1,
+      "question": "How does a next-token predictor generate an entire passage autoregressively?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately details causal conditioning, prefix accumulation, and generation termination via stop markers."
+    },
+    {
+      "item_id": 2,
+      "question": "Does BPE relearn merges when encoding new text?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly states that learned merges are executed deterministically in training order without updating frequencies."
+    },
+    {
+      "item_id": 3,
+      "question": "Why is an unseen bigram a problem for an unsmoothed language model, and how does smoothing help?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 0.95,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly identifies zero probability sequence degradation and probability mass reallocation, with minor unigram Laplace formula adaptation."
+    },
+    {
+      "item_id": 4,
+      "question": "Why can high accuracy hide a useless classifier when the positive class is rare?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately explains majority-class collapse in imbalanced settings and highlights precision and recall utility."
+    },
+    {
+      "item_id": 5,
+      "question": "Why normalize vectors when using cosine similarity, and when does cosine equal a dot product?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly articulates magnitude invariance and demonstrates that unit-normalized vectors render dot product identical to cosine similarity."
+    },
+    {
+      "item_id": 6,
+      "question": "Why can a single linear classifier not represent XOR, while a multilayer network can?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly identifies linear separability failure for XOR and details how non-linear hidden representations enable separation."
+    },
+    {
+      "item_id": 7,
+      "question": "Why does causal attention mask future-token scores with negative infinity rather than zero?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately explains that softmax maps negative infinity to zero attention weight, preventing future token leakage."
+    },
+    {
+      "item_id": 8,
+      "question": "In LoRA, which parameters are frozen and which are learned?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately identifies that original weight matrices are frozen while low-rank matrices A and B are trained."
+    },
+    {
+      "item_id": 9,
+      "question": "In the original BERT masking procedure described here, how are selected tokens manipulated?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 0.95,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly details the 80/10/10 masking breakdown, omitting only the upfront 15% selection threshold."
+    },
+    {
+      "item_id": 10,
+      "question": "Does a successful linguistic probe prove that a language model uses the probed information?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 0.85,
+      "hallucination": true,
+      "faithfulness": false,
+      "rationale": "Correctly denies causal proof, but confabulates an ungrounded connection to legal hallucination retrieval chunks."
+    },
+    {
+      "item_id": 11,
+      "question": "What do the BM25 parameters k and b control, and what happens when each is zero?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Completely and correctly characterizes term-frequency scaling knob k and document-length normalization parameter b."
+    },
+    {
+      "item_id": 12,
+      "question": "How does backtranslation turn monolingual target-language text into training data for source-to-target translation?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly explains reverse MT training, synthetic source generation, and forward-model augmentation."
+    },
+    {
+      "item_id": 13,
+      "question": "What do an LSTM’s forget, input/add, and output gates control?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly maps the functional gating roles for context retention, candidate integration, and hidden state emission."
+    },
+    {
+      "item_id": 14,
+      "question": "How do pitch and loudness differ from fundamental frequency and intensity?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately contrasts subjective perceptual attributes with objective acoustic physical measurements."
+    },
+    {
+      "item_id": 15,
+      "question": "How does CTC collapse the alignment [a, a, blank, a, b, b, blank]?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "fail",
+      "score": 0.0,
+      "hallucination": false,
+      "faithfulness": false,
+      "rationale": "Inverts procedural execution by deleting blanks prior to merging duplicates, producing 'ab' instead of 'aab'."
+    },
+    {
+      "item_id": 16,
+      "question": "What are the two code-generation stages in VALL-E?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately details the autoregressive first-stage quantizer followed by non-autoregressive iterative refinement."
+    },
+    {
+      "item_id": 17,
+      "question": "What two independence assumptions does a bigram HMM part-of-speech tagger make?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly specifies output emission independence and the first-order Markov transition assumption."
+    },
+    {
+      "item_id": 18,
+      "question": "Which grammar rule forms does standard CKY require, and what does a chart cell represent?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately specifies Chomsky Normal Form constraints and span-indexing representation in parsing charts."
+    },
+    {
+      "item_id": 19,
+      "question": "What makes a dependency arc projective, and how can non-projectivity appear in a drawing?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately explains head-dominance path conditions and crossing arc manifestations in linear ordering."
+    },
+    {
+      "item_id": 20,
+      "question": "How does distant supervision provide relation-extraction labels, and why can those labels be noisy?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly details knowledge-base heuristic sentence pairing and context-ambiguity failure modes."
+    },
+    {
+      "item_id": 21,
+      "question": "How do PropBank and FrameNet organize semantic roles differently?",
+      "category": "foundational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly contrasts predicate-specific numbered roles with generalized semantic frame elements."
+    },
+    {
+      "item_id": 22,
+      "question": "What do valence, arousal, and dominance measure in an affect lexicon?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately defines pleasantness, activation level, and perceived control dimensions."
+    },
+    {
+      "item_id": 23,
+      "question": "How does entity linking go beyond coreference resolution?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly explains mention-clustering within text versus resolution to external knowledge bases."
+    },
+    {
+      "item_id": 24,
+      "question": "In RST, how do nucleus and satellite differ?",
+      "category": "foundational",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately characterizes nuclear centrality and structural independence versus satellite support."
+    },
+    {
+      "item_id": 25,
+      "question": "A four-token test sequence has conditional probabilities 0.5, 0.25, 0.5, 0.25. What is its perplexity?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "fail",
+      "score": 0.0,
+      "hallucination": false,
+      "faithfulness": false,
+      "rationale": "Failed arithmetic multiplication (computed 128 instead of 64) and misapplied formula by multiplying by N outside radical, yielding 12.68 instead of 2.8284."
+    },
+    {
+      "item_id": 26,
+      "question": "A binary classifier has TP=24, FP=6, and FN=16. Calculate positive-class precision, recall, and F1.",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately derives precision (0.8), recall (0.6), and harmonic mean F1 (0.686)."
+    },
+    {
+      "item_id": 27,
+      "question": "Why must backpropagation propagate derivatives backward through a computation graph?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately demonstrates chain rule reuse and intermediate gradient accumulation efficiency."
+    },
+    {
+      "item_id": 28,
+      "question": "Token probabilities are A=.55, B=.25, C=.15, D=.05. Which survive top-k with k=2 versus top-p with p=.90?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly derives top-2 tokens {A, B} and nucleus cumulative threshold tokens {A, B, C}."
+    },
+    {
+      "item_id": 29,
+      "question": "You have instruction–answer demonstrations and preferred/rejected answer pairs. How would SFT and DPO use these differently?",
+      "category": "applied",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Rigorous distinction between supervised cross-entropy imitation and direct implicit reward optimization."
+    },
+    {
+      "item_id": 30,
+      "question": "Using BERT, how would you produce one sentiment label per review versus one entity tag per token?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately distinguishes sequence-level pooled classification via [CLS] from token-level hidden state projection."
+    },
+    {
+      "item_id": 31,
+      "question": "Does increasing translation beam width from 1 to 4 guarantee the highest-probability complete translation? Explain.",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly explains heuristic pruning vulnerabilities and absence of global optimality guarantees."
+    },
+    {
+      "item_id": 32,
+      "question": "Why can a bidirectional RNN usefully tag a complete sentence but cannot use its backward context for ordinary online next-token prediction?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly identifies acausal requirements for online generation versus complete prefix-suffix availability during tagging."
+    },
+    {
+      "item_id": 33,
+      "question": "Under exact entity-span-and-type scoring, gold is [New York City] as LOC, but prediction is [New York] as LOC. What errors result?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "fail",
+      "score": 0.4,
+      "hallucination": false,
+      "faithfulness": false,
+      "rationale": "Violates exact match evaluation protocol by denying that the boundary-mismatched prediction constitutes a False Positive."
+    },
+    {
+      "item_id": 34,
+      "question": "Of 10 evaluated tokens, a dependency parser gives 8 the correct head and 6 both the correct head and label. Find UAS and LAS.",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately computes UAS = 0.8 and LAS = 0.6."
+    },
+    {
+      "item_id": 35,
+      "question": "A report dated 2026-04-10 says an event happened yesterday. Using that dateline as the temporal anchor, what date should be extracted?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly anchors relative temporal expression to dateline, extracting 2026-04-09."
+    },
+    {
+      "item_id": 36,
+      "question": "Compare “It is raining” with “Nora bought a bicycle. It is red.” Should both instances of it receive entity antecedents?",
+      "category": "applied",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately differentiates non-referential pleonastic pronouns from anaphoric discourse entities."
+    },
+    {
+      "item_id": 37,
+      "question": "Contrast token creation in BPE and audio vector quantization.",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately contrasts bottom-up character frequency merging with acoustic embedding space clustering."
+    },
+    {
+      "item_id": 38,
+      "question": "An optimal word alignment has S=2, D=1, I=3 and 4 reference words. Find WER. Can it exceed 100%?",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately calculates WER = 150% and validates unbounded upper threshold due to insertions."
+    },
+    {
+      "item_id": 39,
+      "question": "Why might dense retrieval find paraphrases missed by exact term matching, and how does unit normalization affect dot-product scoring?",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately describes semantic embedding neighborhood retrieval and proves unit dot products equal cosine similarity."
+    },
+    {
+      "item_id": 40,
+      "question": "How does a log-mel feature vector differ from an audio-codebook token?",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately differentiates continuous spectral filterbank vectors from discrete quantized codebook indices."
+    },
+    {
+      "item_id": 41,
+      "question": "For “Maya opened the door” and “The door was opened by Maya,” distinguish a constituency description from semantic roles.",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately distinguishes syntactic surface structure divergence from semantic agent-theme constancy."
+    },
+    {
+      "item_id": 42,
+      "question": "Does positive lexicon-based sentiment establish discourse coherence?",
+      "category": "cross_chapter",
+      "difficulty": "hard",
+      "verdict": "fail",
+      "score": 0.4,
+      "hallucination": false,
+      "faithfulness": false,
+      "rationale": "Failed to provide an unambiguous negative; conflated stylistic emotional consistency with relational discourse coherence."
+    },
+    {
+      "item_id": 43,
+      "question": "Would it assign bank the same vector in both?",
+      "category": "conversational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly explains dynamic contextual embeddings resolving lexical polysemy in distinct sentential frames."
+    },
+    {
+      "item_id": 44,
+      "question": "Why could shuffling them change its score?",
+      "category": "conversational",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Accurately explains entity grid transition disruption and syntactic role trajectory perturbation."
+    },
+    {
+      "item_id": 45,
+      "question": "Which embedding model and chunk size are configured in my deployed RAG application?",
+      "category": "abstention",
+      "difficulty": "medium",
+      "verdict": "fail",
+      "score": 0.0,
+      "hallucination": true,
+      "faithfulness": false,
+      "rationale": "Failed to abstain; hallucinated private deployment configuration using generic textbook examples."
+    },
+    {
+      "item_id": 46,
+      "question": "What Recall@5 did my retriever achieve on its latest evaluation run?",
+      "category": "abstention",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly abstained due to absence of proprietary evaluation metrics in context."
+    },
+    {
+      "item_id": 47,
+      "question": "Exactly how many tokens does my custom tokenizer AcornTokenizer-v1 produce for neuroretrieval?",
+      "category": "abstention",
+      "difficulty": "hard",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly abstained due to absence of custom vocabulary and merge rules."
+    },
+    {
+      "item_id": 48,
+      "question": "On what exact date will the authors release a completed Chapter 12?",
+      "category": "abstention",
+      "difficulty": "medium",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly abstained regarding unverified future publication schedules."
+    },
+    {
+      "item_id": 49,
+      "question": "What is the best value of k?",
+      "category": "clarification",
+      "difficulty": "medium",
+      "verdict": "fail",
+      "score": 0.0,
+      "hallucination": false,
+      "faithfulness": false,
+      "rationale": "Failed to seek clarification on an under-specified parameter query; arbitrarily resolved context to k-fold cross-validation."
+    },
+    {
+      "item_id": 50,
+      "question": "Which meaning of bank is intended?",
+      "category": "clarification",
+      "difficulty": "easy",
+      "verdict": "pass",
+      "score": 1.0,
+      "hallucination": false,
+      "faithfulness": true,
+      "rationale": "Correctly identified polysemy and prompted the user for disambiguating context."
+    }
+  ]
+}
