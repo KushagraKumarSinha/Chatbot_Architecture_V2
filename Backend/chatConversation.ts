@@ -743,7 +743,7 @@ async function performHybridSearch(
 function rankBySimilarity(candidates: HybridSearchResult[], topN: number,): { results: HybridSearchResult[]; missingEmbeddingCount: number } {
   const scored = candidates.filter((c) => typeof c.similarity === "number");
   const unscored = candidates.filter((c) => typeof c.similarity !== "number");
-  //scored.sort((a, b) => (b.similarity as number) - (a.similarity as number));
+  scored.sort((a, b) => (b.similarity as number) - (a.similarity as number));
   return { results: [...scored, ...unscored].slice(0, topN), missingEmbeddingCount: unscored.length };
 }
 
