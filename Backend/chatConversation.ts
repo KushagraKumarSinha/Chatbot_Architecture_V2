@@ -19,8 +19,8 @@ const RERANK_TOP_N = 5;
 
 //const MAX_ANSWER_WORDS = 250;
 //const MAX_ANSWER_TOKENS = 500;
-const MAX_ANSWER_WORDS = 120;
-const MAX_ANSWER_TOKENS = 300;
+const MAX_ANSWER_WORDS = 150;
+const MAX_ANSWER_TOKENS = 800;
 
 const CHAT_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -80,6 +80,8 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const UPSTASH_TIMEOUT_MS = 10_000;
 const UPSTASH_MAX_RETRIES = 1;
 const UPSTASH_RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
+
+const MIN_SIMILARITY = 0.60;
 
 // ─────────────────────────────────────────────────────────────────────────
 // System prompts
@@ -740,11 +742,47 @@ async function performHybridSearch(
   return (data ?? []) as HybridSearchResult[];
 }
 
-function rankBySimilarity(candidates: HybridSearchResult[], topN: number,): { results: HybridSearchResult[]; missingEmbeddingCount: number } {
-  const scored = candidates.filter((c) => typeof c.similarity === "number");
-  const unscored = candidates.filter((c) => typeof c.similarity !== "number");
-  scored.sort((a, b) => (b.similarity as number) - (a.similarity as number));
-  return { results: [...scored, ...unscored].slice(0, topN), missingEmbeddingCount: unscored.length };
+
+function rankBySimilarity(
+  candidates: HybridSearchResult[],
+  topN: number,
+): { results: HybridSearchResult[]; missingEmbeddingCount: number } {
+  const scored = candidates.filter(
+    (c) =>
+      typeof c.similarity === "number" &&
+      Number.isFinite(c.similarity) &&
+      c.similarity >= MIN_SIMILARITY
+  );
+
+  const unscored = candidates.filter(
+    (c) =>
+      typeof c.similarity !== "number" ||
+      !Number.isFinite(c.similarity)
+  );
+
+  scored.sort(
+    (a, b) =>
+      (b.similarity as number) - (a.similarity as number)
+  );
+
+  const results = scored.slice(0, topN);
+
+  console.log(
+    `[rerank] ${candidates.length} candidates -> top ${results.length} ` +
+      `(${unscored.length} missing similarity, ` +
+      `${candidates.length - scored.length - unscored.length} below ${MIN_SIMILARITY} threshold)`,
+  );
+
+  console.table(
+    results.map((r, i) => ({
+      rank: i + 1,
+      id: r.id,
+      similarity: (r.similarity as number).toFixed(4),
+      preview: r.content?.slice(0, 80),
+    })),
+  );
+
+  return { results, missingEmbeddingCount: unscored.length };
 }
 
 
@@ -1182,9 +1220,9 @@ export const chatConversation: HandlerFn = async (payload, ctx) => {
       }
 
       // Step 4: arithmetic cosine-similarity ranking (no LLM call).
-      const rankStartedAt = Date.now();
-      const { results: topResults, missingEmbeddingCount } = rankBySimilarity(candidates, RERANK_TOP_N);
-      timings.rank_ms = Date.now() - rankStartedAt;
+      const rankStartedAt = performance.now();
+      const { results: topResults, missingEmbeddingCount } =rankBySimilarity(candidates, RERANK_TOP_N);
+      timings.rank_ms = Number((performance.now() - rankStartedAt).toFixed(3));
 
       if (missingEmbeddingCount > 0) {
         // If this fires on every request, hybrid_search isn't returning the embedding column.
