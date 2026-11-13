@@ -6,6 +6,7 @@ Improved version of **[V1](https://github.com/KushagraKumarSinha/Chatbot_Archite
 3) Added better error handling and retry logic
 4) Created evaluation set
 5) Accounted for prompt injection
+6) Implemented response streaming
 
 Improvements to this:
 1) Adding proxy before request hits backend
