@@ -4,7 +4,7 @@ import { supabase } from '../SupabaseClient';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from "react-router-dom";
 import { Sparkles, ImagePlus, Type, Pencil, MessageSquare, Send } from "lucide-react";
-import { chatwithLLM, getPastMessages} from '../apicalls/conversationapis';
+import { chatwithLLMStream, getPastMessages } from '../apicalls/conversationapis';
 
 const renderInline = (text) => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
@@ -21,8 +21,6 @@ const renderInline = (text) => {
 
 const renderMessage = (message) => {
   if (!message) return null;
-  // Split on blank lines / newlines so each paragraph gets its own <p>,
-  // matching the paragraph spacing seen in the reference screenshot.
   const paragraphs = message.split(/\n+/).filter(Boolean);
   return paragraphs.map((para, i) => (
     <p key={i} className={i > 0 ? "mt-3" : ""}>
@@ -51,11 +49,12 @@ const ChatComponent = () => {
   const { session, loading: authLoading, signInWithOtp, signOut } = useAuth();
   const scrollRef = useRef(null);
 
+  // "auto" while tokens are streaming in (smooth scrolling lags behind
+  // rapid updates and looks jittery); "smooth" otherwise.
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: isSending ? "auto" : "smooth" });
   }, [messages, isSending]);
 
-  // Auto-dismiss the error toast after a few seconds
   useEffect(() => {
     if (!error) return;
     const timer = setTimeout(() => setError(null), 5000);
@@ -83,39 +82,61 @@ const ChatComponent = () => {
     const userMessage = input.trim();
     if (!userMessage || isSending) return;
 
-    // Optimistically show the user's message right away
+    const now = Date.now();
+    const placeholderId = `temp-bot-${now}`;
+
+    // Optimistically show the user's message AND an empty bot bubble that
+    // the stream will fill in.
     setMessages((prev) => [
       ...prev,
-      {
-        id: `temp-user-${Date.now()}`,
-        by: "user",
-        message: userMessage,
-      },
+      { id: `temp-user-${now}`, by: "user", message: userMessage },
+      { id: placeholderId, by: "bot", message: "", streaming: true },
     ]);
     setInput("");
     setIsSending(true);
     setError(null);
 
     try {
-      const data = await chatwithLLM(conversationID, userMessage);
+      const data = await chatwithLLMStream(conversationID, userMessage, {
+        onDelta: (text) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === placeholderId ? { ...m, message: m.message + text } : m
+            )
+          );
+        },
+      });
+
       const reply = data?.reply;
 
       if (reply?.messages) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: reply.id ?? `temp-bot-${Date.now()}`,
-            by: reply.by ?? "bot",
-            message: reply.messages,
-            created_at: reply.created_at,
-          },
-        ]);
+        // Swap the streamed bubble for the final persisted message. Its text
+        // is authoritative (e.g. it may be the moderation fallback).
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === placeholderId
+              ? {
+                  id: reply.id ?? placeholderId,
+                  by: reply.by ?? "bot",
+                  message: reply.messages,
+                  created_at: reply.created_at,
+                }
+              : m
+          )
+        );
       } else {
-        console.warn("Unexpected chatwithLLM response shape:", data);
+        console.warn("Unexpected chat response shape:", data);
+        setMessages((prev) => prev.filter((m) => m.id !== placeholderId));
         setError("Something went wrong. Please try again.");
       }
     } catch (err) {
       console.error("Failed to send message:", err.message);
+      // Drop the placeholder if nothing arrived; otherwise keep the partial text.
+      setMessages((prev) =>
+        prev
+          .filter((m) => !(m.id === placeholderId && !m.message))
+          .map((m) => (m.id === placeholderId ? { ...m, streaming: false } : m))
+      );
       setError("Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
@@ -152,6 +173,9 @@ const ChatComponent = () => {
                 <div className="max-w-[75%] px-4 py-3 rounded-2xl rounded-br-md bg-slate-900 text-white text-sm leading-relaxed">
                   {msg.message}
                 </div>
+              ) : msg.streaming && !msg.message ? (
+                // Waiting for the first token
+                <TypingIndicator />
               ) : (
                 <div className="max-w-[80%] px-5 py-4 rounded-2xl bg-slate-50 text-slate-800 text-sm leading-relaxed">
                   {renderMessage(msg.message)}
@@ -159,12 +183,6 @@ const ChatComponent = () => {
               )}
             </div>
           ))}
-
-          {isSending && (
-            <div className="flex justify-start">
-              <TypingIndicator />
-            </div>
-          )}
 
           <div ref={scrollRef} />
         </div>
